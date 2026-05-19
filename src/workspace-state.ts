@@ -28,15 +28,16 @@ type Snapshot = {
 export type WorkspaceState = Snapshot & {
   past: Snapshot[];
   future: Snapshot[];
+  touchCount: number;
 };
 
-// Seed the workspace with a unit-whole at the top, as a comparison reference.
 export const initialWorkspace: WorkspaceState = {
   pieces: [{ id: "piece-seed", denominator: 1, x: 0, y: 64 }],
   nextId: 1,
   discoveries: [],
   past: [],
   future: [],
+  touchCount: 0,
 };
 
 export type WorkspaceAction =
@@ -54,16 +55,13 @@ export function snap(value: number, grid: number): number {
   return Math.round(value / grid) * grid;
 }
 
-// Slot-finder: in row-major order, return the first (x, y) where a piece of
-// the given denominator fits without overlapping any existing piece. Cols are
-// multiples of SNAP_X (the smallest piece width); rows are multiples of SNAP_Y.
 function findEmptySlot(
   pieces: Piece[],
   denominator: number,
 ): { x: number; y: number } {
   const w = pieceWidth(denominator);
   const COLS = [0, 80, 160, 240, 320, 400, 480, 560];
-  const MAX_ROW_Y = 64 * 12; // bound the search; well past visible area
+  const MAX_ROW_Y = 64 * 12;
 
   for (let y = 64; y <= MAX_ROW_Y; y += SNAP_Y) {
     for (const x of COLS) {
@@ -75,7 +73,7 @@ function findEmptySlot(
       if (!collides) return { x, y };
     }
   }
-  return { x: 0, y: 64 }; // exhausted; overlaps the seed but is at least visible
+  return { x: 0, y: 64 };
 }
 
 // --- discovery detection ---
@@ -168,6 +166,7 @@ function applyMutation(
     discoveries: [...state.discoveries, ...additions],
     past: [...state.past, takeSnapshot(state)],
     future: [],
+    touchCount: state.touchCount + 1,
   };
 }
 
@@ -181,12 +180,7 @@ export function workspaceReducer(
       const id = `piece-${state.nextId}`;
       const nextPieces = [
         ...state.pieces,
-        {
-          id,
-          denominator: action.denominator,
-          x: slot.x,
-          y: slot.y,
-        },
+        { id, denominator: action.denominator, x: slot.x, y: slot.y },
       ];
       return applyMutation(state, nextPieces, state.nextId + 1);
     }
@@ -211,6 +205,7 @@ export function workspaceReducer(
         discoveries: previous.discoveries,
         past: state.past.slice(0, -1),
         future: [takeSnapshot(state), ...state.future],
+        touchCount: state.touchCount,
       };
     }
     case "redo": {
@@ -222,6 +217,7 @@ export function workspaceReducer(
         discoveries: next.discoveries,
         past: [...state.past, takeSnapshot(state)],
         future: state.future.slice(1),
+        touchCount: state.touchCount,
       };
     }
   }

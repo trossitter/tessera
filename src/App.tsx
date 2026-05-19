@@ -1,15 +1,20 @@
-import { useReducer, useEffect } from "react";
+import { useReducer, useEffect, useState } from "react";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
 import { Discoveries } from "./components/Discoveries";
+import { Challenge } from "./components/Challenge";
 import {
   initialWorkspace,
   workspaceReducer,
   type Denominator,
 } from "./workspace-state";
 
+const CHALLENGE_TOUCH_THRESHOLD = 8;
+const CHALLENGE_TIME_THRESHOLD_MS = 90 * 1000;
+
 export default function App() {
   const [state, dispatch] = useReducer(workspaceReducer, initialWorkspace);
+  const [challengeActive, setChallengeActive] = useState(false);
 
   const handleSpawn = (denominator: Denominator) => {
     dispatch({ type: "spawn", denominator });
@@ -18,6 +23,24 @@ export default function App() {
     dispatch({ type: "move", id, x, y });
   };
 
+  // Trigger 1: enough time on the page.
+  useEffect(() => {
+    if (challengeActive) return;
+    const timer = setTimeout(
+      () => setChallengeActive(true),
+      CHALLENGE_TIME_THRESHOLD_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [challengeActive]);
+
+  // Trigger 2: enough touches.
+  useEffect(() => {
+    if (!challengeActive && state.touchCount >= CHALLENGE_TOUCH_THRESHOLD) {
+      setChallengeActive(true);
+    }
+  }, [state.touchCount, challengeActive]);
+
+  // Keyboard: undo/redo
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey;
@@ -53,7 +76,10 @@ export default function App() {
           />
           <Supply onSpawn={handleSpawn} />
         </div>
-        <Discoveries discoveries={state.discoveries} />
+        <div className="flex flex-col gap-4 min-h-0">
+          {challengeActive && <Challenge discoveries={state.discoveries} />}
+          <Discoveries discoveries={state.discoveries} />
+        </div>
       </main>
     </div>
   );
