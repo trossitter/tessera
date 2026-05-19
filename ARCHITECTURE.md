@@ -95,4 +95,4 @@ Planned scenes (3–5 clips total):
 
 ## Out of scope
 
-Per spec: no LLM-based conversational agent, no multi-lesson curriculum, no learner accounts, no progress persistence, no adaptive AI, no analytics, no teacher-facing surfaces. Per design discipline: no badges, streaks, gamification, "Great job!" voice, candy palette.
+Per spec: no LLM-based conversational agent, no multi-lesson curriculum, no learner accounts, no progress persistence, no adaptive AI, no analytics. Per design discipline: no badges, streaks, gamification, "Great job!" voice, candy palette.
