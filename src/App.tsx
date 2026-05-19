@@ -1,7 +1,7 @@
 import { useReducer, useEffect } from "react";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
-import { Ascent } from "./components/Ascent";
+import { Discoveries } from "./components/Discoveries";
 import {
   initialWorkspace,
   workspaceReducer,
@@ -53,7 +53,7 @@ export default function App() {
           />
           <Supply onSpawn={handleSpawn} />
         </div>
-        <Ascent discoveries={state.discoveries} />
+        <Discoveries discoveries={state.discoveries} />
       </main>
     </div>
   );
