@@ -1,24 +1,22 @@
 type Props = {
-  numerator: number;
   denominator: number;
   widthPct: number;
 };
 
-const PALETTE: Record<number, string> = {
-  1: "bg-rose-300",
-  2: "bg-amber-300",
-  4: "bg-emerald-300",
-  8: "bg-sky-300",
+const COLOR_BY_DENOM: Record<number, string> = {
+  1: "bg-whole",
+  2: "bg-half",
+  4: "bg-quarter",
+  8: "bg-eighth",
 };
 
-export function FractionBlock({ numerator, denominator, widthPct }: Props) {
-  const color = PALETTE[denominator] ?? "bg-slate-300";
+export function FractionBlock({ denominator, widthPct }: Props) {
+  const color = COLOR_BY_DENOM[denominator] ?? "bg-taupe";
   return (
     <div
-      className={`${color} h-14 rounded-lg flex items-center justify-center text-amber-900 font-semibold shadow-sm`}
+      className={`${color} h-14 rounded-md shadow-sm`}
       style={{ width: `calc(${widthPct}% - 4px)` }}
-    >
-      {numerator}/{denominator}
-    </div>
+      aria-label={denominator === 1 ? "one whole" : `one ${denominator}th`}
+    />
   );
 }

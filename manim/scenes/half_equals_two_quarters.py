@@ -17,28 +17,35 @@ from manim import (
     Create,
     Transform,
     VGroup,
-    BLUE,
     LEFT,
     RIGHT,
 )
+
+# Hilda's Hills palette — kept in sync with src/index.css @theme block.
+PARCHMENT = "#F5F1E8"
+HALF = "#C77D6E"  # the half-piece and its two quarter-equivalents stay one color,
+                  # so the eye reads area-preservation, not a color story.
 
 
 class HalfEqualsTwoQuarters(Scene):
     """1/2 = 2/4 by area preservation.
 
-    Placeholder content — palette, type, and timing are not yet locked.
-    Will be redone after the visual identity pass.
+    A single half-piece splits into two quarter-pieces that occupy the
+    same space. Both states use the same color so the invariant — total
+    area — is visually obvious. Notation is intentionally absent.
     """
 
     def construct(self):
-        half = Rectangle(width=4, height=1, color=BLUE, fill_opacity=0.8)
+        self.camera.background_color = PARCHMENT
+
+        half = Rectangle(width=4, height=1, color=HALF, fill_opacity=0.9, stroke_opacity=0)
         self.play(Create(half))
         self.wait(0.5)
 
-        q1 = Rectangle(width=2, height=1, color=BLUE, fill_opacity=0.8)
-        q1.move_to(half.get_center() + LEFT * 1)
-        q2 = Rectangle(width=2, height=1, color=BLUE, fill_opacity=0.8)
-        q2.move_to(half.get_center() + RIGHT * 1)
+        q1 = Rectangle(width=2, height=1, color=HALF, fill_opacity=0.9, stroke_opacity=0)
+        q1.move_to(half.get_center() + LEFT * 1.05)
+        q2 = Rectangle(width=2, height=1, color=HALF, fill_opacity=0.9, stroke_opacity=0)
+        q2.move_to(half.get_center() + RIGHT * 1.05)
 
         self.play(Transform(half, VGroup(q1, q2)))
         self.wait(1)
