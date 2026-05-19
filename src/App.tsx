@@ -12,8 +12,7 @@ export default function App() {
   const [state, dispatch] = useReducer(workspaceReducer, initialWorkspace);
 
   const handleSpawn = (denominator: Denominator) => {
-    const offset = ((state.nextId - 1) % 12) * 16;
-    dispatch({ type: "spawn", denominator, x: 40 + offset, y: 40 + offset });
+    dispatch({ type: "spawn", denominator });
   };
   const handleMove = (id: string, x: number, y: number) => {
     dispatch({ type: "move", id, x, y });

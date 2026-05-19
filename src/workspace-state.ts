@@ -14,9 +14,9 @@ export type Piece = {
 };
 
 export type Discovery = {
-  id: string;          // canonical key like "2 = 4,4"
-  configA: number[];   // denominators of pieces in one row (uniform), sorted by x
-  configB: number[];   // denominators of pieces in the matching row
+  id: string;
+  configA: number[];
+  configB: number[];
 };
 
 type Snapshot = {
@@ -30,8 +30,9 @@ export type WorkspaceState = Snapshot & {
   future: Snapshot[];
 };
 
+// Seed the workspace with a unit-whole at the top, as a comparison reference.
 export const initialWorkspace: WorkspaceState = {
-  pieces: [],
+  pieces: [{ id: "piece-seed", denominator: 1, x: 0, y: 64 }],
   nextId: 1,
   discoveries: [],
   past: [],
@@ -39,7 +40,7 @@ export const initialWorkspace: WorkspaceState = {
 };
 
 export type WorkspaceAction =
-  | { type: "spawn"; denominator: Denominator; x: number; y: number }
+  | { type: "spawn"; denominator: Denominator }
   | { type: "move"; id: string; x: number; y: number }
   | { type: "remove"; id: string }
   | { type: "undo" }
@@ -53,6 +54,30 @@ export function snap(value: number, grid: number): number {
   return Math.round(value / grid) * grid;
 }
 
+// Slot-finder: in row-major order, return the first (x, y) where a piece of
+// the given denominator fits without overlapping any existing piece. Cols are
+// multiples of SNAP_X (the smallest piece width); rows are multiples of SNAP_Y.
+function findEmptySlot(
+  pieces: Piece[],
+  denominator: number,
+): { x: number; y: number } {
+  const w = pieceWidth(denominator);
+  const COLS = [0, 80, 160, 240, 320, 400, 480, 560];
+  const MAX_ROW_Y = 64 * 12; // bound the search; well past visible area
+
+  for (let y = 64; y <= MAX_ROW_Y; y += SNAP_Y) {
+    for (const x of COLS) {
+      const collides = pieces.some((p) => {
+        if (p.y !== y) return false;
+        const pW = pieceWidth(p.denominator);
+        return x < p.x + pW && p.x < x + w;
+      });
+      if (!collides) return { x, y };
+    }
+  }
+  return { x: 0, y: 64 }; // exhausted; overlaps the seed but is at least visible
+}
+
 // --- discovery detection ---
 
 type RowAnalysis = {
@@ -60,8 +85,8 @@ type RowAnalysis = {
   denominators: number[];
   minX: number;
   maxX: number;
-  filled: boolean;   // edge-to-edge, no gaps
-  uniform: boolean;  // all pieces same denominator
+  filled: boolean;
+  uniform: boolean;
 };
 
 function analyzeRows(pieces: Piece[]): RowAnalysis[] {
@@ -152,14 +177,15 @@ export function workspaceReducer(
 ): WorkspaceState {
   switch (action.type) {
     case "spawn": {
+      const slot = findEmptySlot(state.pieces, action.denominator);
       const id = `piece-${state.nextId}`;
       const nextPieces = [
         ...state.pieces,
         {
           id,
           denominator: action.denominator,
-          x: snap(action.x, SNAP_X),
-          y: snap(action.y, SNAP_Y),
+          x: slot.x,
+          y: slot.y,
         },
       ];
       return applyMutation(state, nextPieces, state.nextId + 1);
