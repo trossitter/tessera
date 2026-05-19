@@ -15,7 +15,7 @@ export type Piece = {
 
 export type Discovery = {
   id: string;
-  configA: number[];
+  configA: number[];   // canonical (sorted ascending by denominator)
   configB: number[];
 };
 
@@ -55,10 +55,6 @@ export function snap(value: number, grid: number): number {
   return Math.round(value / grid) * grid;
 }
 
-// Spawn slot policy: prefer continuing an existing uniform-denomination
-// row, then a fully empty row, then any non-colliding slot. This lets
-// the kid build clean uniform rows naturally, which is what detection
-// needs to surface equivalences.
 function findEmptySlot(
   pieces: Piece[],
   denominator: number,
@@ -108,14 +104,18 @@ function findEmptySlot(
 }
 
 // --- discovery detection ---
+//
+// A row is eligible if its pieces are edge-to-edge (no gaps). The pieces'
+// denominators are canonicalized to a sorted multiset, so [Q H Q] and
+// [H Q Q] are recognized as the same combination — order does not matter.
+// Mixed-denomination rows are eligible.
 
 type RowAnalysis = {
   y: number;
-  denominators: number[];
+  sortedDenominators: number[]; // ascending, canonical for multiset
   minX: number;
   maxX: number;
   filled: boolean;
-  uniform: boolean;
 };
 
 function analyzeRows(pieces: Piece[]): RowAnalysis[] {
@@ -126,25 +126,27 @@ function analyzeRows(pieces: Piece[]): RowAnalysis[] {
   }
   const rows: RowAnalysis[] = [];
   for (const [y, ps] of byY) {
-    const sorted = [...ps].sort((a, b) => a.x - b.x);
-    const widths = sorted.map((p) => pieceWidth(p.denominator));
-    const minX = sorted[0].x;
+    const sortedByX = [...ps].sort((a, b) => a.x - b.x);
+    const widths = sortedByX.map((p) => pieceWidth(p.denominator));
+    const minX = sortedByX[0].x;
     const sumWidth = widths.reduce((a, b) => a + b, 0);
-    const maxX = sorted[sorted.length - 1].x + widths[widths.length - 1];
+    const maxX = sortedByX[sortedByX.length - 1].x + widths[widths.length - 1];
+    const sortedDenominators = ps
+      .map((p) => p.denominator)
+      .sort((a, b) => a - b);
     rows.push({
       y,
-      denominators: sorted.map((p) => p.denominator),
+      sortedDenominators,
       minX,
       maxX,
       filled: sumWidth === maxX - minX,
-      uniform: sorted.every((p) => p.denominator === sorted[0].denominator),
     });
   }
   return rows;
 }
 
 function configKey(config: number[]): string {
-  return config.join(",");
+  return [...config].sort((a, b) => a - b).join(",");
 }
 
 function discoveryId(configA: number[], configB: number[]): string {
@@ -153,7 +155,7 @@ function discoveryId(configA: number[], configB: number[]): string {
 }
 
 export function detectDiscoveries(pieces: Piece[]): Discovery[] {
-  const rows = analyzeRows(pieces).filter((r) => r.filled && r.uniform);
+  const rows = analyzeRows(pieces).filter((r) => r.filled);
   const found: Discovery[] = [];
   const seen = new Set<string>();
   for (let i = 0; i < rows.length; i++) {
@@ -161,14 +163,15 @@ export function detectDiscoveries(pieces: Piece[]): Discovery[] {
       const a = rows[i];
       const b = rows[j];
       if (a.minX !== b.minX || a.maxX !== b.maxX) continue;
-      if (configKey(a.denominators) === configKey(b.denominators)) continue;
-      const id = discoveryId(a.denominators, b.denominators);
+      if (configKey(a.sortedDenominators) === configKey(b.sortedDenominators))
+        continue;
+      const id = discoveryId(a.sortedDenominators, b.sortedDenominators);
       if (seen.has(id)) continue;
       seen.add(id);
       const [smaller, larger] =
-        a.denominators.length < b.denominators.length
-          ? [a.denominators, b.denominators]
-          : [b.denominators, a.denominators];
+        a.sortedDenominators.length < b.sortedDenominators.length
+          ? [a.sortedDenominators, b.sortedDenominators]
+          : [b.sortedDenominators, a.sortedDenominators];
       found.push({ id, configA: smaller, configB: larger });
     }
   }

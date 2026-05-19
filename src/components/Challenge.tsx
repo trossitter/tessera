@@ -7,7 +7,6 @@ type ChallengeSpec = {
   target: Target;
 };
 
-// Staggered: each challenge unlocks when the previous is complete.
 const CHALLENGES: ChallengeSpec[] = [
   { id: "half", target: { num: 1, denom: 2 } },
   { id: "quarter", target: { num: 1, denom: 4 } },
@@ -15,20 +14,35 @@ const CHALLENGES: ChallengeSpec[] = [
   { id: "whole", target: { num: 1, denom: 1 } },
 ];
 
-const DENOMS = [1, 2, 4, 8];
-
-// Uniform-denominator configs that sum exactly to the target.
+// Enumerate all multisets of pieces (denominations 1, 2, 4, 8) that sum
+// exactly to the target. Each multiset is returned in ascending denomination
+// order so it matches the canonical configKey form.
+//
+// Work in eighth-units (lcm of the denominators is 8) to keep integer math.
 function configsForTarget(target: Target): number[][] {
-  const configs: number[][] = [];
-  for (const d of DENOMS) {
-    // n pieces of denominator d → n/d = target.num/target.denom
-    // n = target.num * d / target.denom
-    const n = (target.num * d) / target.denom;
-    if (Number.isInteger(n) && n >= 1) {
-      configs.push(Array.from({ length: n }, () => d));
+  const targetUnits = (target.num * 8) / target.denom;
+  if (!Number.isInteger(targetUnits)) return [];
+  const results: number[][] = [];
+  // a = count of [1]s (8 units each)
+  // b = count of [2]s (4 units each)
+  // c = count of [4]s (2 units each)
+  // d = count of [8]s (1 unit each)
+  for (let a = 0; a * 8 <= targetUnits; a++) {
+    for (let b = 0; a * 8 + b * 4 <= targetUnits; b++) {
+      for (let c = 0; a * 8 + b * 4 + c * 2 <= targetUnits; c++) {
+        const d = targetUnits - a * 8 - b * 4 - c * 2;
+        if (d < 0) continue;
+        if (a + b + c + d === 0) continue;
+        const config: number[] = [];
+        for (let i = 0; i < a; i++) config.push(1);
+        for (let i = 0; i < b; i++) config.push(2);
+        for (let i = 0; i < c; i++) config.push(4);
+        for (let i = 0; i < d; i++) config.push(8);
+        results.push(config);
+      }
     }
   }
-  return configs;
+  return results;
 }
 
 function targetLabel(target: Target): string {
@@ -36,7 +50,7 @@ function targetLabel(target: Target): string {
 }
 
 function configKey(c: number[]): string {
-  return c.join(",");
+  return [...c].sort((a, b) => a - b).join(",");
 }
 
 function configsTouched(discoveries: Discovery[]): Set<string> {
@@ -84,10 +98,11 @@ type Props = {
 export function Challenge({ discoveries }: Props) {
   const touched = configsTouched(discoveries);
 
-  // Walk the staggered list. Show each challenge in turn; stop after
-  // the first incomplete one so the next is not revealed yet.
-  const visible: { spec: ChallengeSpec; foundCount: number; total: number }[] =
-    [];
+  const visible: {
+    spec: ChallengeSpec;
+    foundCount: number;
+    total: number;
+  }[] = [];
   for (const spec of CHALLENGES) {
     const configs = configsForTarget(spec.target);
     const foundCount = configs.filter((c) => touched.has(configKey(c))).length;
