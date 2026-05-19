@@ -55,6 +55,10 @@ export function snap(value: number, grid: number): number {
   return Math.round(value / grid) * grid;
 }
 
+// Spawn slot policy: prefer continuing an existing uniform-denomination
+// row, then a fully empty row, then any non-colliding slot. This lets
+// the kid build clean uniform rows naturally, which is what detection
+// needs to surface equivalences.
 function findEmptySlot(
   pieces: Piece[],
   denominator: number,
@@ -63,6 +67,32 @@ function findEmptySlot(
   const COLS = [0, 80, 160, 240, 320, 400, 480, 560];
   const MAX_ROW_Y = 64 * 12;
 
+  const byY = new Map<number, Piece[]>();
+  for (const p of pieces) {
+    if (!byY.has(p.y)) byY.set(p.y, []);
+    byY.get(p.y)!.push(p);
+  }
+
+  // 1) Prefer rows that already hold only this denomination, with space.
+  const sortedYs = Array.from(byY.keys()).sort((a, b) => a - b);
+  for (const y of sortedYs) {
+    const rowPieces = byY.get(y)!;
+    if (!rowPieces.every((p) => p.denominator === denominator)) continue;
+    for (const x of COLS) {
+      const collides = rowPieces.some((p) => {
+        const pW = pieceWidth(p.denominator);
+        return x < p.x + pW && p.x < x + w;
+      });
+      if (!collides) return { x, y };
+    }
+  }
+
+  // 2) Otherwise, take the topmost empty row.
+  for (let y = 64; y <= MAX_ROW_Y; y += SNAP_Y) {
+    if (!byY.has(y)) return { x: 0, y };
+  }
+
+  // 3) Fallback: any non-colliding slot.
   for (let y = 64; y <= MAX_ROW_Y; y += SNAP_Y) {
     for (const x of COLS) {
       const collides = pieces.some((p) => {
@@ -73,6 +103,7 @@ function findEmptySlot(
       if (!collides) return { x, y };
     }
   }
+
   return { x: 0, y: 64 };
 }
 

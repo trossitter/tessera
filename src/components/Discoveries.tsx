@@ -15,6 +15,11 @@ function configFraction(config: number[]): { num: number; denom: number } {
   return { num: config.length, denom: config[0] };
 }
 
+function fmtFraction(f: { num: number; denom: number }): string {
+  if (f.denom === 1) return String(f.num);
+  return `${f.num}/${f.denom}`;
+}
+
 function ConfigBar({ config }: { config: number[] }) {
   return (
     <div className="flex">
@@ -45,7 +50,7 @@ function DiscoveryRow({ discovery }: { discovery: Discovery }) {
         <ConfigBar config={discovery.configB} />
       </div>
       <div className="text-xs text-ink/75 font-medium">
-        {a.num}/{a.denom} = {b.num}/{b.denom}
+        {fmtFraction(a)} = {fmtFraction(b)}
       </div>
     </div>
   );
