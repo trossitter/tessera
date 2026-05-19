@@ -1,7 +1,7 @@
 import { useReducer, useEffect } from "react";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
-import { ChatTutor } from "./components/ChatTutor";
+import { Ascent } from "./components/Ascent";
 import {
   initialWorkspace,
   workspaceReducer,
@@ -13,19 +13,12 @@ export default function App() {
 
   const handleSpawn = (denominator: Denominator) => {
     const offset = ((state.nextId - 1) % 12) * 16;
-    dispatch({
-      type: "spawn",
-      denominator,
-      x: 40 + offset,
-      y: 40 + offset,
-    });
+    dispatch({ type: "spawn", denominator, x: 40 + offset, y: 40 + offset });
   };
-
   const handleMove = (id: string, x: number, y: number) => {
     dispatch({ type: "move", id, x, y });
   };
 
-  // Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z or Cmd/Ctrl+Y to redo.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey;
@@ -61,7 +54,7 @@ export default function App() {
           />
           <Supply onSpawn={handleSpawn} />
         </div>
-        <ChatTutor />
+        <Ascent discoveries={state.discoveries} />
       </main>
     </div>
   );
