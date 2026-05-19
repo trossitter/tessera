@@ -3,13 +3,13 @@
 @theme {
   /* surfaces */
   --color-paper: #ffffff;
-  --color-parchment: #faf4e0;
+  --color-parchment: #f5f1e8;
   --color-ink: #2d3b47;
-  --color-taupe: #e0d2b0;
+  --color-taupe: #d9d0c0;
 
   /* fraction blocks (Hilda's Hills) */
-  --color-whole: #d4825e;
-  --color-half: #c77d6e;
+  --color-whole: #dc977a;
+  --color-half: #d09486;
   --color-quarter: #88a878;
   --color-eighth: #6b8aa8;
 }
