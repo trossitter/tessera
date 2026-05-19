@@ -15,7 +15,7 @@ export type Piece = {
 
 export type Discovery = {
   id: string;
-  configA: number[];   // canonical (sorted ascending by denominator)
+  configA: number[];
   configB: number[];
 };
 
@@ -31,8 +31,10 @@ export type WorkspaceState = Snapshot & {
   touchCount: number;
 };
 
+const SEED_PIECE: Piece = { id: "piece-seed", denominator: 1, x: 0, y: 64 };
+
 export const initialWorkspace: WorkspaceState = {
-  pieces: [{ id: "piece-seed", denominator: 1, x: 0, y: 64 }],
+  pieces: [SEED_PIECE],
   nextId: 1,
   discoveries: [],
   past: [],
@@ -44,6 +46,7 @@ export type WorkspaceAction =
   | { type: "spawn"; denominator: Denominator }
   | { type: "move"; id: string; x: number; y: number }
   | { type: "remove"; id: string }
+  | { type: "clear" }
   | { type: "undo" }
   | { type: "redo" };
 
@@ -69,7 +72,6 @@ function findEmptySlot(
     byY.get(p.y)!.push(p);
   }
 
-  // 1) Prefer rows that already hold only this denomination, with space.
   const sortedYs = Array.from(byY.keys()).sort((a, b) => a - b);
   for (const y of sortedYs) {
     const rowPieces = byY.get(y)!;
@@ -83,12 +85,10 @@ function findEmptySlot(
     }
   }
 
-  // 2) Otherwise, take the topmost empty row.
   for (let y = 64; y <= MAX_ROW_Y; y += SNAP_Y) {
     if (!byY.has(y)) return { x: 0, y };
   }
 
-  // 3) Fallback: any non-colliding slot.
   for (let y = 64; y <= MAX_ROW_Y; y += SNAP_Y) {
     for (const x of COLS) {
       const collides = pieces.some((p) => {
@@ -103,16 +103,11 @@ function findEmptySlot(
   return { x: 0, y: 64 };
 }
 
-// --- discovery detection ---
-//
-// A row is eligible if its pieces are edge-to-edge (no gaps). The pieces'
-// denominators are canonicalized to a sorted multiset, so [Q H Q] and
-// [H Q Q] are recognized as the same combination — order does not matter.
-// Mixed-denomination rows are eligible.
+// --- discovery detection (combination-based; mixed rows allowed) ---
 
 type RowAnalysis = {
   y: number;
-  sortedDenominators: number[]; // ascending, canonical for multiset
+  sortedDenominators: number[];
   minX: number;
   maxX: number;
   filled: boolean;
@@ -229,6 +224,12 @@ export function workspaceReducer(
     case "remove": {
       const nextPieces = state.pieces.filter((p) => p.id !== action.id);
       return applyMutation(state, nextPieces, state.nextId);
+    }
+    case "clear": {
+      // Restore only the seed whole. Discoveries are preserved (the record
+      // of what the kid has demonstrated stays); this is for clearing
+      // visual clutter, not for losing progress. Undo recovers prior state.
+      return applyMutation(state, [SEED_PIECE], state.nextId);
     }
     case "undo": {
       if (state.past.length === 0) return state;

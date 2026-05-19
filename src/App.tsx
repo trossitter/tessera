@@ -23,7 +23,6 @@ export default function App() {
     dispatch({ type: "move", id, x, y });
   };
 
-  // Trigger 1: enough time on the page.
   useEffect(() => {
     if (challengeActive) return;
     const timer = setTimeout(
@@ -33,14 +32,12 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [challengeActive]);
 
-  // Trigger 2: enough touches.
   useEffect(() => {
     if (!challengeActive && state.touchCount >= CHALLENGE_TOUCH_THRESHOLD) {
       setChallengeActive(true);
     }
   }, [state.touchCount, challengeActive]);
 
-  // Keyboard: undo/redo
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey;
@@ -73,6 +70,7 @@ export default function App() {
             onMove={handleMove}
             onUndo={() => dispatch({ type: "undo" })}
             onRedo={() => dispatch({ type: "redo" })}
+            onClear={() => dispatch({ type: "clear" })}
           />
           <Supply onSpawn={handleSpawn} />
         </div>

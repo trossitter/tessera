@@ -8,6 +8,7 @@ type Props = {
   onMove: (id: string, x: number, y: number) => void;
   onUndo: () => void;
   onRedo: () => void;
+  onClear: () => void;
 };
 
 export function Workspace({
@@ -17,10 +18,27 @@ export function Workspace({
   onMove,
   onUndo,
   onRedo,
+  onClear,
 }: Props) {
   return (
     <section className="bg-paper rounded-lg shadow-sm border border-taupe overflow-hidden min-h-[400px] flex-1 flex flex-col">
-      <div className="flex justify-end gap-1 px-2 pt-2">
+      <div className="relative flex-1">
+        {pieces.map((piece) => (
+          <Piece key={piece.id} piece={piece} onMove={onMove} />
+        ))}
+      </div>
+      <div className="flex justify-end items-center gap-2 px-3 py-2 border-t border-taupe">
+        <button
+          type="button"
+          onClick={onClear}
+          className="text-xs px-2 py-1 rounded text-ink/70 hover:text-ink hover:bg-parchment transition-colors"
+          aria-label="clear workspace"
+        >
+          clear
+        </button>
+        <span className="text-ink/20" aria-hidden>
+          |
+        </span>
         <button
           type="button"
           onClick={onUndo}
@@ -39,11 +57,6 @@ export function Workspace({
         >
           redo →
         </button>
-      </div>
-      <div className="relative flex-1">
-        {pieces.map((piece) => (
-          <Piece key={piece.id} piece={piece} onMove={onMove} />
-        ))}
       </div>
     </section>
   );
