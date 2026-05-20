@@ -4,6 +4,7 @@ import { SUPPLY_DENOMS, type Denominator } from "../workspace-state";
 
 type Props = {
   showLabels: boolean;
+  excludeWhole?: boolean;
   onSpawn: (denominator: Denominator) => void;
   onDragStart: (denominator: Denominator, clientX: number, clientY: number) => void;
   onDragMove: (clientX: number, clientY: number) => void;
@@ -14,7 +15,8 @@ type Props = {
 const SUPPLY_SCALE = 0.5;
 const DRAG_THRESHOLD_PX = 6;
 
-export function Supply({ showLabels, onSpawn, onDragStart, onDragMove, onDragEnd, onDragCancel }: Props) {
+export function Supply({ showLabels, excludeWhole = false, onSpawn, onDragStart, onDragMove, onDragEnd, onDragCancel }: Props) {
+  const denoms = excludeWhole ? SUPPLY_DENOMS.filter(d => d !== 1) : SUPPLY_DENOMS;
   const pressRef = useRef<{
     denominator: Denominator;
     startX: number;
@@ -59,7 +61,7 @@ export function Supply({ showLabels, onSpawn, onDragStart, onDragMove, onDragEnd
 
   return (
     <section className="bg-paper rounded-lg shadow-sm border border-taupe p-4 flex flex-col gap-3">
-      {SUPPLY_DENOMS.map((d) => (
+      {denoms.map((d) => (
         <div key={d} className="flex gap-1 justify-center">
           {Array.from({ length: d }, (_, i) => (
             <div

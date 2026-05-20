@@ -499,6 +499,7 @@ export default function App() {
 
           <Supply
             showLabels={showLabels}
+            excludeWhole={phase === "challenge" && !!currentChallenge && currentChallenge.target.num < currentChallenge.target.denom}
             onSpawn={handleSpawn}
             onDragStart={handleDragStart}
             onDragMove={handleDragMove}
