@@ -4,10 +4,11 @@ import type { Piece as PieceType } from "../workspace-state";
 
 type Props = {
   piece: PieceType;
+  glowing?: boolean;
   onMove: (id: string, x: number, y: number) => void;
 };
 
-export function Piece({ piece, onMove }: Props) {
+export function Piece({ piece, glowing, onMove }: Props) {
   const startRef = useRef<{ pointerX: number; pointerY: number } | null>(null);
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
 
@@ -38,6 +39,7 @@ export function Piece({ piece, onMove }: Props) {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      className={glowing ? "piece-glowing" : undefined}
       style={{
         position: "absolute",
         left: piece.x,

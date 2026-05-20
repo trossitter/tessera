@@ -29,6 +29,7 @@ export type WorkspaceState = Snapshot & {
   past: Snapshot[];
   future: Snapshot[];
   touchCount: number;
+  seenConfigs: string[]; // every filled-row configKey ever seen; append-only, never rolled back
 };
 
 const SEED_PIECE: Piece = { id: "piece-seed", denominator: 1, x: 0, y: 64 };
@@ -37,6 +38,7 @@ export const initialWorkspace: WorkspaceState = {
   pieces: [SEED_PIECE],
   nextId: 1,
   discoveries: [],
+  seenConfigs: [],
   past: [],
   future: [],
   touchCount: 0,
@@ -47,6 +49,7 @@ export type WorkspaceAction =
   | { type: "move"; id: string; x: number; y: number }
   | { type: "remove"; id: string }
   | { type: "clear" }
+  | { type: "replay"; discovery: Discovery }
   | { type: "undo" }
   | { type: "redo" };
 
@@ -73,6 +76,8 @@ function findEmptySlot(
   }
 
   const sortedYs = Array.from(byY.keys()).sort((a, b) => a - b);
+
+  // First pass: same-denomination rows
   for (const y of sortedYs) {
     const rowPieces = byY.get(y)!;
     if (!rowPieces.every((p) => p.denominator === denominator)) continue;
@@ -85,10 +90,24 @@ function findEmptySlot(
     }
   }
 
+  // Second pass: any existing row with space
+  for (const y of sortedYs) {
+    const rowPieces = byY.get(y)!;
+    for (const x of COLS) {
+      const collides = rowPieces.some((p) => {
+        const pW = pieceWidth(p.denominator);
+        return x < p.x + pW && p.x < x + w;
+      });
+      if (!collides) return { x, y };
+    }
+  }
+
+  // Third pass: new empty row
   for (let y = 64; y <= MAX_ROW_Y; y += SNAP_Y) {
     if (!byY.has(y)) return { x: 0, y };
   }
 
+  // Fallback: any empty spot
   for (let y = 64; y <= MAX_ROW_Y; y += SNAP_Y) {
     for (const x of COLS) {
       const collides = pieces.some((p) => {
@@ -140,8 +159,21 @@ function analyzeRows(pieces: Piece[]): RowAnalysis[] {
   return rows;
 }
 
-function configKey(config: number[]): string {
+export function configKey(config: number[]): string {
   return [...config].sort((a, b) => a - b).join(",");
+}
+
+export function pieceIdsForConfig(pieces: Piece[], targetKey: string): string[] {
+  const byY = new Map<number, Piece[]>();
+  for (const p of pieces) {
+    if (!byY.has(p.y)) byY.set(p.y, []);
+    byY.get(p.y)!.push(p);
+  }
+  for (const [, ps] of byY) {
+    const key = configKey(ps.map(p => p.denominator));
+    if (key === targetKey) return ps.map(p => p.id);
+  }
+  return [];
 }
 
 function discoveryId(configA: number[], configB: number[]): string {
@@ -186,13 +218,31 @@ function applyMutation(
   nextPieces: Piece[],
   nextId: number,
 ): WorkspaceState {
+  const filledRows = analyzeRows(nextPieces).filter((r) => r.filled);
+
+  // Accumulate seenConfigs: every filled-row config the child has ever built.
+  const seenSet = new Set(state.seenConfigs);
+  const newSeenKeys: string[] = [];
+  for (const row of filledRows) {
+    const key = configKey(row.sortedDenominators);
+    if (!seenSet.has(key)) {
+      seenSet.add(key);
+      newSeenKeys.push(key);
+    }
+  }
+
+  // Detect cross-row equivalence discoveries.
   const detected = detectDiscoveries(nextPieces);
   const existingIds = new Set(state.discoveries.map((d) => d.id));
   const additions = detected.filter((d) => !existingIds.has(d.id));
+
   return {
     pieces: nextPieces,
     nextId,
     discoveries: [...state.discoveries, ...additions],
+    seenConfigs: newSeenKeys.length > 0
+      ? [...state.seenConfigs, ...newSeenKeys]
+      : state.seenConfigs,
     past: [...state.past, takeSnapshot(state)],
     future: [],
     touchCount: state.touchCount + 1,
@@ -226,10 +276,39 @@ export function workspaceReducer(
       return applyMutation(state, nextPieces, state.nextId);
     }
     case "clear": {
-      // Restore only the seed whole. Discoveries are preserved (the record
-      // of what the kid has demonstrated stays); this is for clearing
-      // visual clutter, not for losing progress. Undo recovers prior state.
-      return applyMutation(state, [SEED_PIECE], state.nextId);
+      return {
+        pieces: [],
+        nextId: state.nextId,
+        discoveries: state.discoveries,
+        seenConfigs: state.seenConfigs,
+        past: [...state.past, takeSnapshot(state)],
+        future: [],
+        touchCount: state.touchCount + 1,
+      };
+    }
+    case "replay": {
+      const { discovery } = action;
+      let nextId = state.nextId;
+      const newPieces: Piece[] = [SEED_PIECE];
+      let x = 0;
+      for (const denom of discovery.configA) {
+        newPieces.push({ id: `piece-${nextId++}`, denominator: denom as Denominator, x, y: 128 });
+        x += pieceWidth(denom);
+      }
+      x = 0;
+      for (const denom of discovery.configB) {
+        newPieces.push({ id: `piece-${nextId++}`, denominator: denom as Denominator, x, y: 192 });
+        x += pieceWidth(denom);
+      }
+      return {
+        pieces: newPieces,
+        nextId,
+        discoveries: state.discoveries,
+        seenConfigs: state.seenConfigs,
+        past: [...state.past, takeSnapshot(state)],
+        future: [],
+        touchCount: state.touchCount,
+      };
     }
     case "undo": {
       if (state.past.length === 0) return state;
@@ -238,6 +317,7 @@ export function workspaceReducer(
         pieces: previous.pieces,
         nextId: previous.nextId,
         discoveries: previous.discoveries,
+        seenConfigs: state.seenConfigs,
         past: state.past.slice(0, -1),
         future: [takeSnapshot(state), ...state.future],
         touchCount: state.touchCount,
@@ -250,6 +330,7 @@ export function workspaceReducer(
         pieces: next.pieces,
         nextId: next.nextId,
         discoveries: next.discoveries,
+        seenConfigs: state.seenConfigs,
         past: [...state.past, takeSnapshot(state)],
         future: state.future.slice(1),
         touchCount: state.touchCount,

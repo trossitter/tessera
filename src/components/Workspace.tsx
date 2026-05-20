@@ -3,6 +3,7 @@ import type { Piece as PieceType } from "../workspace-state";
 
 type Props = {
   pieces: PieceType[];
+  glowingIds: Set<string>;
   canUndo: boolean;
   canRedo: boolean;
   onMove: (id: string, x: number, y: number) => void;
@@ -13,6 +14,7 @@ type Props = {
 
 export function Workspace({
   pieces,
+  glowingIds,
   canUndo,
   canRedo,
   onMove,
@@ -22,12 +24,7 @@ export function Workspace({
 }: Props) {
   return (
     <section className="bg-paper rounded-lg shadow-sm border border-taupe overflow-hidden min-h-[400px] flex-1 flex flex-col">
-      <div className="relative flex-1">
-        {pieces.map((piece) => (
-          <Piece key={piece.id} piece={piece} onMove={onMove} />
-        ))}
-      </div>
-      <div className="flex justify-end items-center gap-2 px-3 py-2 border-t border-taupe">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-taupe">
         <button
           type="button"
           onClick={onClear}
@@ -57,6 +54,16 @@ export function Workspace({
         >
           redo →
         </button>
+      </div>
+      <div className="relative flex-1">
+        {pieces.map((piece) => (
+          <Piece
+            key={piece.id}
+            piece={piece}
+            glowing={glowingIds.has(piece.id)}
+            onMove={onMove}
+          />
+        ))}
       </div>
     </section>
   );

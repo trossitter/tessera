@@ -1,17 +1,50 @@
 @import "tailwindcss";
 
 @theme {
-  /* surfaces */
-  --color-paper: #ffffff;
-  --color-parchment: #f5f1e8;
-  --color-ink: #2d3b47;
-  --color-taupe: #d9d0c0;
+  /* surfaces — from tessera3's warm cream background */
+  --color-paper: #f8f5ee;
+  --color-parchment: #ede8d8;
+  --color-ink: #1a2e2a;
+  --color-taupe: #c4b89e;
+  --color-gold: #b8882a;
 
-  /* fraction blocks (Hilda's Hills) */
-  --color-whole: #dc977a;
-  --color-half: #d09486;
-  --color-quarter: #88a878;
-  --color-eighth: #6b8aa8;
+  /* fraction pieces — tessera3 only: terracotta corner, deep teal, bright teal */
+  --color-whole: #c07840;    /* terracotta corner of tessera3 */
+  --color-half: #216858;     /* deep forest teal, tessera3 upper-left */
+  --color-quarter: #3aaa96;  /* bright turquoise, tessera3 */
+  --color-eighth: #78c4ba;   /* lightest teal highlight */
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fade-in 0.45s ease-out forwards;
+}
+
+.canvas-fade-out {
+  opacity: 0;
+  transition: opacity 0.35s ease-out;
+}
+
+@keyframes challenge-celebrate {
+  0%   { box-shadow: 0 0 0 0 rgba(100, 180, 120, 0.6); }
+  35%  { box-shadow: 0 0 0 12px rgba(100, 180, 120, 0.2); }
+  100% { box-shadow: 0 0 0 20px rgba(100, 180, 120, 0); }
+}
+.challenge-celebrate {
+  animation: challenge-celebrate 1.1s ease-out forwards;
+}
+
+@keyframes piece-glow {
+  0%   { box-shadow: 0 0 0 2px rgba(255, 198, 88, 0.9); }
+  60%  { box-shadow: 0 0 0 10px rgba(255, 198, 88, 0.3); }
+  100% { box-shadow: 0 0 0 18px rgba(255, 198, 88, 0); }
+}
+.piece-glowing {
+  animation: piece-glow 1.3s ease-out forwards;
+  border-radius: 6px;
 }
 
 html, body, #root {
