@@ -159,6 +159,17 @@ function analyzeRows(pieces: Piece[]): RowAnalysis[] {
   return rows;
 }
 
+export type FilledRow = { config: number[]; sum: number };
+
+export function getFilledRows(pieces: Piece[]): FilledRow[] {
+  return analyzeRows(pieces)
+    .filter(r => r.filled)
+    .map(r => ({
+      config: r.sortedDenominators,
+      sum: r.sortedDenominators.reduce((s: number, d: number) => s + 1 / d, 0),
+    }));
+}
+
 export function configKey(config: number[]): string {
   return [...config].sort((a, b) => a - b).join(",");
 }

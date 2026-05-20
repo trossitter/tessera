@@ -48,11 +48,13 @@ export function Challenge({
             <span className="font-semibold">{label}</span>.
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-ink/60">
-              {foundCount} of {required} found
-            </span>
-          </div>
+          {required > 1 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-ink/60">
+                {foundCount} of {required} found
+              </span>
+            </div>
+          )}
 
           {complete && (
             <div className="flex flex-col gap-3 pt-1">

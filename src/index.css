@@ -57,6 +57,29 @@
   animation: encouragement-in-out 3.5s ease-in-out forwards;
 }
 
+/* Entrance animation — tessera3 splits into 4 quadrants, each flies in from its corner */
+@keyframes fly-tl {
+  from { transform: translate(-160px, -160px); opacity: 0; }
+  to   { transform: translate(0, 0);           opacity: 1; }
+}
+@keyframes fly-tr {
+  from { transform: translate(160px, -160px);  opacity: 0; }
+  to   { transform: translate(0, 0);           opacity: 1; }
+}
+@keyframes fly-bl {
+  from { transform: translate(-160px, 160px);  opacity: 0; }
+  to   { transform: translate(0, 0);           opacity: 1; }
+}
+@keyframes fly-br {
+  from { transform: translate(160px, 160px);   opacity: 0; }
+  to   { transform: translate(0, 0);           opacity: 1; }
+}
+
+.entrance-tl { animation: fly-tl 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.entrance-tr { animation: fly-tr 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.entrance-bl { animation: fly-bl 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.entrance-br { animation: fly-br 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
 html, body, #root {
   height: 100%;
   margin: 0;

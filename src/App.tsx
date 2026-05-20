@@ -8,6 +8,7 @@ import {
   workspaceReducer,
   configKey,
   pieceIdsForConfig,
+  getFilledRows,
   type Denominator,
   type Discovery,
 } from "./workspace-state";
@@ -28,15 +29,6 @@ const ENCOURAGEMENTS = [
   "good start — keep playing",
 ];
 
-function discoveryMatchesTarget(d: Discovery, target: { num: number; denom: number }): boolean {
-  const targetVal = target.num / target.denom;
-  const val = d.configA.reduce((s, denom) => s + 1 / denom, 0);
-  return Math.abs(val - targetVal) < 1e-9;
-}
-
-function labelConfig(config: number[]): string {
-  return config.map(d => d === 1 ? "1" : `1/${d}`).join(" + ");
-}
 
 type Phase = "sandbox" | "challenge";
 
@@ -44,6 +36,15 @@ const LAST_ROW_Y = 64 * 8; // MAX_ROW_Y from workspace-state
 
 export default function App() {
   const [state, dispatch] = useReducer(workspaceReducer, initialWorkspace);
+
+  // --- entrance animation ---
+  const [showEntrance, setShowEntrance] = useState(true);
+  const [entranceFading, setEntranceFading] = useState(false);
+  useEffect(() => {
+    const fade = setTimeout(() => setEntranceFading(true), 900);
+    const gone = setTimeout(() => setShowEntrance(false), 1350);
+    return () => { clearTimeout(fade); clearTimeout(gone); };
+  }, []);
 
   // --- phase & pill state ---
   const [phase, setPhase] = useState<Phase>("sandbox");
@@ -54,7 +55,7 @@ export default function App() {
 
   // --- challenge state ---
   const [challengeIndex, setChallengeIndex] = useState(0);
-  const [acknowledgedIds, setAcknowledgedIds] = useState<string[]>([]);
+  const [challengeCredits, setChallengeCredits] = useState<string[]>([]); // configKeys of credited arrangements
 
   // --- visual fx ---
   const [glowingIds, setGlowingIds] = useState<Set<string>>(new Set());
@@ -133,46 +134,40 @@ export default function App() {
 
   // --- challenge logic ---
 
-  // Auto-credit any new discovery matching the current challenge.
-  // The act of construction is the demonstration of understanding.
+  // Single-row detection: credit as soon as the child builds any filled row
+  // summing to the challenge target. One row = one demonstration = one credit.
   useEffect(() => {
     if (phase !== "challenge") return;
     const current = CHALLENGES[challengeIndex];
     if (!current) return;
-    const acknowledged = new Set(acknowledgedIds);
-    for (const d of state.discoveries) {
-      if (discoveryMatchesTarget(d, current.target) && !acknowledged.has(d.id)) {
-        // Credit immediately — glow the pieces, name what the child found
-        const keyA = configKey(d.configA);
-        const keyB = configKey(d.configB);
-        const idsA = pieceIdsForConfig(state.pieces, keyA);
-        const idsB = pieceIdsForConfig(state.pieces, keyB);
-        setGlowingIds(new Set([...idsA, ...idsB]));
-        if (glowTimer.current) clearTimeout(glowTimer.current);
-        glowTimer.current = setTimeout(() => setGlowingIds(new Set()), GLOW_DURATION_MS);
-        setAcknowledgedIds(prev => [...prev, d.id]);
-        const msg = `you found that ${labelConfig(d.configA)} = ${labelConfig(d.configB)}.`;
-        setGuideMessage(msg);
-        if (guideTimer.current) clearTimeout(guideTimer.current);
-        guideTimer.current = setTimeout(() => setGuideMessage(null), 5000);
-        return;
+    const targetVal = current.target.num / current.target.denom;
+    const credited = new Set(challengeCredits);
+    for (const row of getFilledRows(state.pieces)) {
+      if (Math.abs(row.sum - targetVal) < 1e-9) {
+        const key = configKey(row.config);
+        if (!credited.has(key)) {
+          const ids = pieceIdsForConfig(state.pieces, key);
+          setGlowingIds(new Set(ids));
+          if (glowTimer.current) clearTimeout(glowTimer.current);
+          glowTimer.current = setTimeout(() => setGlowingIds(new Set()), GLOW_DURATION_MS);
+          setChallengeCredits(prev => [...prev, key]);
+          const msg = credited.size === 0
+            ? `you made ${current.label}.`
+            : `you found another way to make ${current.label}.`;
+          setGuideMessage(msg);
+          if (guideTimer.current) clearTimeout(guideTimer.current);
+          guideTimer.current = setTimeout(() => setGuideMessage(null), 5000);
+          return;
+        }
       }
     }
-  }, [state.discoveries, phase, challengeIndex, acknowledgedIds]);
+  }, [state.pieces, phase, challengeIndex, challengeCredits]);
 
   const handleNext = () => {
     const nextIdx = challengeIndex + 1;
     dispatch({ type: "clear" });
     setGuideMessage(null);
-    if (nextIdx < CHALLENGES.length) {
-      const nextChallenge = CHALLENGES[nextIdx];
-      const autoAck = state.discoveries
-        .filter((d) => discoveryMatchesTarget(d, nextChallenge.target))
-        .map((d) => d.id);
-      setAcknowledgedIds(autoAck);
-    } else {
-      setAcknowledgedIds([]);
-    }
+    setChallengeCredits([]);
     setChallengeIndex(nextIdx);
   };
 
@@ -196,25 +191,65 @@ export default function App() {
   const currentChallenge = CHALLENGES[challengeIndex] ?? null;
   const allDone = challengeIndex >= CHALLENGES.length;
   const required = currentChallenge?.required ?? 0;
-  const foundCount = acknowledgedIds.length;
+  const foundCount = challengeCredits.length;
   const challengeComplete = !allDone && foundCount >= required;
   const panelVisible = phase === "challenge" || state.discoveries.length > 0;
 
+  const TILE = 200; // px per quadrant
+  const IMG = TILE * 2; // full image render size
+
   return (
     <div className="h-full flex flex-col bg-parchment">
-      <header className="flex items-center gap-3 px-5 py-2.5 border-b border-taupe/50">
+
+      {/* Entrance animation — 4 quadrants fly in from corners */}
+      {showEntrance && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 bg-parchment"
+          style={{ transition: "opacity 450ms ease-out", opacity: entranceFading ? 0 : 1 }}
+        >
+          <div style={{ display: "grid", gridTemplateColumns: `${TILE}px ${TILE}px`, gap: 0 }}>
+            {([
+              ["entrance-tl", "0px 0px"],
+              ["entrance-tr", `-${TILE}px 0px`],
+              ["entrance-bl", `0px -${TILE}px`],
+              ["entrance-br", `-${TILE}px -${TILE}px`],
+            ] as const).map(([cls, pos]) => (
+              <div
+                key={cls}
+                className={cls}
+                style={{
+                  width: TILE,
+                  height: TILE,
+                  backgroundImage: "url(/assets/tessera3.png)",
+                  backgroundSize: `${IMG}px ${IMG}px`,
+                  backgroundPosition: pos,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <header className="flex items-center gap-3 px-5 py-3 border-b border-taupe/50">
         <img
           src="/assets/tessera3.png"
           alt=""
           aria-hidden
-          className="w-8 h-8 rounded-md object-cover"
+          className="w-10 h-10 rounded-md object-cover"
           style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}
         />
         <span
-          className="text-base font-semibold"
-          style={{ color: "#1a2e2a", letterSpacing: "0.06em" }}
+          className="text-xl font-semibold tracking-wide"
+          style={{ color: "#1a2e2a" }}
         >
           tessera
+        </span>
+        <span className="flex-1" />
+        <span
+          className="text-xs"
+          style={{ color: "#1a2e2a", opacity: 0.45, letterSpacing: "0.08em" }}
+        >
+          designed by Thalia
         </span>
       </header>
 
