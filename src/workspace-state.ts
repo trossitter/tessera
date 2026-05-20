@@ -67,7 +67,7 @@ function findEmptySlot(
 ): { x: number; y: number } {
   const w = pieceWidth(denominator);
   const COLS = [0, 80, 160, 240, 320, 400, 480, 560];
-  const MAX_ROW_Y = 64 * 12;
+  const MAX_ROW_Y = 64 * 8;
 
   const byY = new Map<number, Piece[]>();
   for (const p of pieces) {

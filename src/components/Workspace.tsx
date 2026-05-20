@@ -6,7 +6,9 @@ type Props = {
   glowingIds: Set<string>;
   canUndo: boolean;
   canRedo: boolean;
+  encouragement: string | null;
   onMove: (id: string, x: number, y: number) => void;
+  onRemove: (id: string) => void;
   onUndo: () => void;
   onRedo: () => void;
   onClear: () => void;
@@ -17,7 +19,9 @@ export function Workspace({
   glowingIds,
   canUndo,
   canRedo,
+  encouragement,
   onMove,
+  onRemove,
   onUndo,
   onRedo,
   onClear,
@@ -33,9 +37,7 @@ export function Workspace({
         >
           clear
         </button>
-        <span className="text-ink/20" aria-hidden>
-          |
-        </span>
+        <span className="text-ink/20" aria-hidden>|</span>
         <button
           type="button"
           onClick={onUndo}
@@ -55,13 +57,47 @@ export function Workspace({
           redo →
         </button>
       </div>
+
       <div className="relative flex-1">
+        {/* Encouragement toast */}
+        {encouragement && (
+          <div
+            className="encouragement-toast"
+            style={{
+              position: "absolute",
+              top: 12,
+              left: 0,
+              right: 0,
+              display: "flex",
+              justifyContent: "center",
+              pointerEvents: "none",
+              zIndex: 5,
+            }}
+          >
+            <span
+              style={{
+                background: "rgba(30,107,107,0.10)",
+                color: "#1e6b6b",
+                fontSize: "0.8rem",
+                fontWeight: 500,
+                padding: "4px 14px",
+                borderRadius: 20,
+                letterSpacing: "0.02em",
+              }}
+            >
+              {encouragement}
+            </span>
+          </div>
+        )}
+
+        {/* Pieces */}
         {pieces.map((piece) => (
           <Piece
             key={piece.id}
             piece={piece}
             glowing={glowingIds.has(piece.id)}
             onMove={onMove}
+            onRemove={onRemove}
           />
         ))}
       </div>

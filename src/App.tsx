@@ -12,61 +12,110 @@ import {
   type Discovery,
 } from "./workspace-state";
 
-const CHALLENGE_TIME_THRESHOLD_MS = 60 * 1000;
 const GLOW_DURATION_MS = 1300;
+const ENCOURAGEMENT_DURATION_MS = 3500;
 
-// required = how many distinct equivalences the child must find to advance
 const CHALLENGES = [
-  { id: "half",      target: { num: 1, denom: 2 }, label: "1/2", required: 1 },
+  { id: "half",       target: { num: 1, denom: 2 }, label: "1/2", required: 1 },
   { id: "three-qtr", target: { num: 3, denom: 4 }, label: "3/4", required: 1 },
   { id: "whole",     target: { num: 1, denom: 1 }, label: "1",   required: 1 },
 ] as const;
 
-function discoveryMatchesTarget(
-  d: Discovery,
-  target: { num: number; denom: number },
-): boolean {
+const ENCOURAGEMENTS = [
+  "nice — keep going",
+  "there you go — keep adding",
+  "good start — keep playing",
+];
+
+function discoveryMatchesTarget(d: Discovery, target: { num: number; denom: number }): boolean {
   const targetVal = target.num / target.denom;
   const val = d.configA.reduce((s, denom) => s + 1 / denom, 0);
   return Math.abs(val - targetVal) < 1e-9;
 }
 
+type Phase = "sandbox" | "prompted" | "challenge";
+
 export default function App() {
   const [state, dispatch] = useReducer(workspaceReducer, initialWorkspace);
-  const [challengeActive, setChallengeActive] = useState(false);
+
+  // --- phase & opt-in state ---
+  const [phase, setPhase] = useState<Phase>("sandbox");
+  const [everPrompted, setEverPrompted] = useState(false);
+  const [spawnsSinceDismiss, setSpawnsSinceDismiss] = useState(0);
+  const [nudgeInterval, setNudgeInterval] = useState(50);
+
+  // --- challenge state ---
   const [challengeIndex, setChallengeIndex] = useState(0);
-  // IDs of discoveries the child has consciously submitted for the current challenge
   const [acknowledgedIds, setAcknowledgedIds] = useState<string[]>([]);
   const [pendingDiscovery, setPendingDiscovery] = useState<Discovery | null>(null);
+
+  // --- visual fx ---
   const [glowingIds, setGlowingIds] = useState<Set<string>>(new Set());
   const glowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [encouragement, setEncouragement] = useState<string | null>(null);
+  const encouragementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const firstSpawnRef = useRef(false);
+
+  // --- prompt trigger ---
+
+  // Piece-count nudge only — fires at 50 → 25 → 12 → 6 → 3 spawns
+  useEffect(() => {
+    if (phase !== "sandbox") return;
+    if (spawnsSinceDismiss >= nudgeInterval) {
+      setPhase("prompted");
+    }
+  }, [spawnsSinceDismiss, nudgeInterval, phase]);
+
+  // --- opt-in handlers ---
+
+  const handleAcceptChallenge = () => {
+    dispatch({ type: "clear" });
+    setPhase("challenge");
+    setEverPrompted(true);
+    setSpawnsSinceDismiss(0);
+  };
+
+  const handleDismissChallenge = () => {
+    setPhase("sandbox");
+    setEverPrompted(true);
+    setSpawnsSinceDismiss(0);
+    setNudgeInterval((prev) => Math.max(3, Math.floor(prev / 2)));
+  };
+
+  // --- workspace handlers ---
 
   const handleSpawn = (denominator: Denominator) => {
     dispatch({ type: "spawn", denominator });
+    if (phase === "sandbox") {
+      setSpawnsSinceDismiss((prev) => prev + 1);
+    }
+    // Zero-to-one encouragement on first piece placed
+    if (!firstSpawnRef.current) {
+      firstSpawnRef.current = true;
+      const msg = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+      setEncouragement(msg);
+      if (encouragementTimer.current) clearTimeout(encouragementTimer.current);
+      encouragementTimer.current = setTimeout(() => setEncouragement(null), ENCOURAGEMENT_DURATION_MS);
+    }
   };
+
   const handleMove = (id: string, x: number, y: number) => {
     dispatch({ type: "move", id, x, y });
   };
+
+  const handleRemove = (id: string) => {
+    dispatch({ type: "remove", id });
+  };
+
   const handleReplay = (discovery: Discovery) => {
     dispatch({ type: "replay", discovery });
   };
 
-  // Challenge activates on first discovery, or after 60s fallback
-  useEffect(() => {
-    if (challengeActive) return;
-    const timer = setTimeout(() => setChallengeActive(true), CHALLENGE_TIME_THRESHOLD_MS);
-    return () => clearTimeout(timer);
-  }, [challengeActive]);
+  // --- challenge logic ---
 
+  // Detect new discovery matching current challenge
   useEffect(() => {
-    if (!challengeActive && state.discoveries.length > 0) {
-      setChallengeActive(true);
-    }
-  }, [state.discoveries.length, challengeActive]);
-
-  // Detect a new discovery that matches the current challenge
-  useEffect(() => {
-    if (!challengeActive || pendingDiscovery) return;
+    if (phase !== "challenge" || pendingDiscovery) return;
     const current = CHALLENGES[challengeIndex];
     if (!current) return;
     const acknowledged = new Set(acknowledgedIds);
@@ -76,11 +125,10 @@ export default function App() {
         return;
       }
     }
-  }, [state.discoveries, challengeActive, challengeIndex, acknowledgedIds, pendingDiscovery]);
+  }, [state.discoveries, phase, challengeIndex, acknowledgedIds, pendingDiscovery]);
 
   const handleSubmit = () => {
     if (!pendingDiscovery) return;
-    // Glow both rows that formed the discovery
     const keyA = configKey(pendingDiscovery.configA);
     const keyB = configKey(pendingDiscovery.configB);
     const idsA = pieceIdsForConfig(state.pieces, keyA);
@@ -88,18 +136,18 @@ export default function App() {
     setGlowingIds(new Set([...idsA, ...idsB]));
     if (glowTimer.current) clearTimeout(glowTimer.current);
     glowTimer.current = setTimeout(() => setGlowingIds(new Set()), GLOW_DURATION_MS);
-    setAcknowledgedIds(prev => [...prev, pendingDiscovery.id]);
+    setAcknowledgedIds((prev) => [...prev, pendingDiscovery.id]);
     setPendingDiscovery(null);
   };
 
   const handleNext = () => {
     const nextIdx = challengeIndex + 1;
-    const nextChallenge = CHALLENGES[nextIdx];
-    if (nextChallenge) {
-      // Auto-acknowledge discoveries already found for the next challenge
+    dispatch({ type: "clear" });
+    if (nextIdx < CHALLENGES.length) {
+      const nextChallenge = CHALLENGES[nextIdx];
       const autoAck = state.discoveries
-        .filter(d => discoveryMatchesTarget(d, nextChallenge.target))
-        .map(d => d.id);
+        .filter((d) => discoveryMatchesTarget(d, nextChallenge.target))
+        .map((d) => d.id);
       setAcknowledgedIds(autoAck);
     } else {
       setAcknowledgedIds([]);
@@ -108,7 +156,7 @@ export default function App() {
     setPendingDiscovery(null);
   };
 
-  // Keyboard undo/redo
+  // --- keyboard undo/redo ---
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey;
@@ -130,8 +178,7 @@ export default function App() {
   const required = currentChallenge?.required ?? 0;
   const foundCount = acknowledgedIds.length;
   const challengeComplete = !allDone && !pendingDiscovery && foundCount >= required;
-
-  const panelVisible = challengeActive || state.discoveries.length > 0;
+  const panelVisible = phase === "challenge" || state.discoveries.length > 0;
 
   return (
     <div className="h-full flex flex-col bg-parchment">
@@ -143,25 +190,75 @@ export default function App() {
           className="w-8 h-8 rounded-md object-cover"
           style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}
         />
-        <span className="text-base font-semibold" style={{ color: "#1a2e2a", letterSpacing: "0.06em" }}>
+        <span
+          className="text-base font-semibold"
+          style={{ color: "#1a2e2a", letterSpacing: "0.06em" }}
+        >
           tessera
         </span>
       </header>
+
       <main className="flex-1 flex gap-4 p-4 min-h-0">
         <div className="flex flex-col gap-4 min-h-0 flex-1 min-w-0">
-          <Workspace
-            pieces={state.pieces}
-            glowingIds={glowingIds}
-            canUndo={state.past.length > 0}
-            canRedo={state.future.length > 0}
-            onMove={handleMove}
-            onUndo={() => dispatch({ type: "undo" })}
-            onRedo={() => dispatch({ type: "redo" })}
-            onClear={() => dispatch({ type: "clear" })}
-          />
+          {/* Workspace wrapper — relative so the opt-in overlay can be positioned over it */}
+          <div className="relative flex-1 min-h-0 flex flex-col">
+            <Workspace
+              pieces={state.pieces}
+              glowingIds={glowingIds}
+              canUndo={state.past.length > 0}
+              canRedo={state.future.length > 0}
+              encouragement={encouragement}
+              onMove={handleMove}
+              onRemove={handleRemove}
+              onUndo={() => dispatch({ type: "undo" })}
+              onRedo={() => dispatch({ type: "redo" })}
+              onClear={() => dispatch({ type: "clear" })}
+            />
+
+            {/* Challenge opt-in overlay */}
+            {phase === "prompted" && (
+              <div
+                className="absolute inset-0 flex items-center justify-center rounded-lg z-10"
+                style={{
+                  background: "rgba(247,243,232,0.82)",
+                  backdropFilter: "blur(6px)",
+                }}
+              >
+                <div
+                  className="bg-paper rounded-xl border border-taupe shadow-md flex flex-col gap-5 mx-4"
+                  style={{ padding: "28px 28px", maxWidth: 300, width: "100%" }}
+                >
+                  <p className="text-lg text-ink font-medium leading-snug">
+                    {everPrompted
+                      ? "you deserve a challenge."
+                      : "ready for a challenge?"}
+                  </p>
+                  <div className="flex flex-col gap-2.5">
+                    <button
+                      type="button"
+                      onClick={handleAcceptChallenge}
+                      className="text-sm px-4 py-2.5 rounded-md font-medium transition-all active:scale-95"
+                      style={{ background: "#1e6b6b", color: "#f7f3e8" }}
+                    >
+                      take the challenge
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDismissChallenge}
+                      className="text-sm px-4 py-2.5 rounded-md text-ink/60 hover:text-ink hover:bg-parchment transition-all active:scale-95"
+                    >
+                      keep exploring
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <Supply onSpawn={handleSpawn} />
         </div>
 
+        {/* Right panel: slides in on first discovery or when in challenge mode */}
         <div
           className="flex flex-col gap-4 min-h-0 overflow-hidden shrink-0"
           style={{
@@ -170,7 +267,7 @@ export default function App() {
             transition: "width 700ms ease-in-out, opacity 600ms ease-in-out",
           }}
         >
-          {challengeActive && (
+          {phase === "challenge" && (
             <div className="fade-in">
               <Challenge
                 label={currentChallenge?.label ?? ""}

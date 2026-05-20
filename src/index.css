@@ -47,6 +47,16 @@
   border-radius: 6px;
 }
 
+@keyframes encouragement-in-out {
+  0%   { opacity: 0; transform: translateY(-4px); }
+  12%  { opacity: 1; transform: translateY(0); }
+  75%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+.encouragement-toast {
+  animation: encouragement-in-out 3.5s ease-in-out forwards;
+}
+
 html, body, #root {
   height: 100%;
   margin: 0;

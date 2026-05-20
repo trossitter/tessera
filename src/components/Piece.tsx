@@ -2,19 +2,23 @@ import { useRef, useState } from "react";
 import { FractionBlock } from "./FractionBlock";
 import type { Piece as PieceType } from "../workspace-state";
 
+const TAP_MAX_MOVE_PX = 10;
+const TAP_MAX_MS = 250;
+
 type Props = {
   piece: PieceType;
   glowing?: boolean;
   onMove: (id: string, x: number, y: number) => void;
+  onRemove: (id: string) => void;
 };
 
-export function Piece({ piece, glowing, onMove }: Props) {
-  const startRef = useRef<{ pointerX: number; pointerY: number } | null>(null);
+export function Piece({ piece, glowing, onMove, onRemove }: Props) {
+  const startRef = useRef<{ pointerX: number; pointerY: number; time: number } | null>(null);
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId);
-    startRef.current = { pointerX: e.clientX, pointerY: e.clientY };
+    startRef.current = { pointerX: e.clientX, pointerY: e.clientY, time: Date.now() };
     setDrag({ dx: 0, dy: 0 });
   };
 
@@ -26,9 +30,18 @@ export function Piece({ piece, glowing, onMove }: Props) {
     });
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: React.PointerEvent) => {
     if (!startRef.current || !drag) return;
-    onMove(piece.id, piece.x + drag.dx, piece.y + drag.dy);
+    const dx = e.clientX - startRef.current.pointerX;
+    const dy = e.clientY - startRef.current.pointerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const elapsed = Date.now() - startRef.current.time;
+
+    if (dist < TAP_MAX_MOVE_PX && elapsed < TAP_MAX_MS) {
+      onRemove(piece.id);
+    } else {
+      onMove(piece.id, piece.x + drag.dx, piece.y + drag.dy);
+    }
     setDrag(null);
     startRef.current = null;
   };
