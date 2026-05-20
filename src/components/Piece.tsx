@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { FractionBlock } from "./FractionBlock";
+import { snap, SNAP_X, SNAP_Y } from "../workspace-state";
 import type { Piece as PieceType } from "../workspace-state";
 
 const TAP_MAX_MOVE_PX = 10;
@@ -58,7 +59,9 @@ export function Piece({ piece, glowing, showLabel, onMove, onRemove }: Props) {
         position: "absolute",
         left: piece.x,
         top: piece.y,
-        transform: drag ? `translate(${drag.dx}px, ${drag.dy}px)` : undefined,
+        transform: drag
+          ? `translate(${snap(piece.x + drag.dx, SNAP_X) - piece.x}px, ${snap(piece.y + drag.dy, SNAP_Y) - piece.y}px)`
+          : undefined,
         touchAction: "none",
         cursor: drag ? "grabbing" : "grab",
         zIndex: drag ? 10 : 1,
