@@ -79,6 +79,7 @@ export default function App() {
   // --- supply drag ---
   const supplyDenomRef = useRef<Denominator | null>(null);
   const [supplyDragPos, setSupplyDragPos] = useState<{ clientX: number; clientY: number } | null>(null);
+  const [snapPreview, setSnapPreview] = useState<{ x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
 
   // --- labels toggle ---
@@ -152,19 +153,37 @@ export default function App() {
   // --- supply drag handlers ---
   // Pointer capture stays on the supply element throughout; events bubble here via callbacks.
 
+  const computeSnapPreview = (denominator: Denominator, clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) { setSnapPreview(null); return; }
+    const rect = canvas.getBoundingClientRect();
+    if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+      const w = pieceWidth(denominator);
+      const snappedX = Math.max(0, Math.min(snap(clientX - rect.left - w / 2, SNAP_X), rect.width - w));
+      const snappedY = Math.max(SNAP_Y, Math.min(snap(clientY - rect.top - PIECE_HEIGHT / 2, SNAP_Y), LAST_ROW_Y));
+      setSnapPreview({ x: snappedX, y: snappedY });
+    } else {
+      setSnapPreview(null);
+    }
+  };
+
   const handleDragStart = (denominator: Denominator, clientX: number, clientY: number) => {
     supplyDenomRef.current = denominator;
     setSupplyDragPos({ clientX, clientY });
+    computeSnapPreview(denominator, clientX, clientY);
   };
 
   const handleDragMove = (clientX: number, clientY: number) => {
     setSupplyDragPos({ clientX, clientY });
+    const denom = supplyDenomRef.current;
+    if (denom) computeSnapPreview(denom, clientX, clientY);
   };
 
   const handleDragEnd = (clientX: number, clientY: number) => {
     const denominator = supplyDenomRef.current;
     supplyDenomRef.current = null;
     setSupplyDragPos(null);
+    setSnapPreview(null);
     if (!denominator) return;
     const canvas = canvasRef.current;
     if (!canvas) { dispatch({ type: "spawn", denominator }); return; }
@@ -182,6 +201,7 @@ export default function App() {
   const handleDragCancel = () => {
     supplyDenomRef.current = null;
     setSupplyDragPos(null);
+    setSnapPreview(null);
   };
 
   const dismissSpawnCount = useRef(0);
@@ -398,6 +418,9 @@ export default function App() {
               canRedo={state.future.length > 0}
               encouragement={encouragement}
               showLabels={showLabels}
+              snapPreview={snapPreview && supplyDenomRef.current
+                ? { ...snapPreview, denominator: supplyDenomRef.current }
+                : null}
               canvasRef={canvasRef}
               onMove={holdingConfig ? () => {} : handleMove}
               onRemove={holdingConfig ? () => {} : handleRemove}
@@ -551,18 +574,18 @@ export default function App() {
         </div>
       </main>
 
-      {/* Supply drag ghost — follows the finger; no overlay needed (capture stays on supply element) */}
-      {supplyDragPos && supplyDenomRef.current && (
+      {/* Ghost — full scale, centered on finger; hides when snap preview takes over in workspace */}
+      {supplyDragPos && supplyDenomRef.current && !snapPreview && (
         <div
           className="fixed pointer-events-none z-50"
           style={{
-            left: supplyDragPos.clientX - pieceWidth(supplyDenomRef.current) * 0.5 / 2,
-            top: supplyDragPos.clientY - PIECE_HEIGHT * 0.5 / 2,
-            opacity: 0.85,
-            filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.25))",
+            left: supplyDragPos.clientX - pieceWidth(supplyDenomRef.current) / 2,
+            top: supplyDragPos.clientY - PIECE_HEIGHT / 2,
+            opacity: 0.72,
+            filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.28))",
           }}
         >
-          <FractionBlock denominator={supplyDenomRef.current} scale={0.5} showLabel={showLabels} />
+          <FractionBlock denominator={supplyDenomRef.current} showLabel={showLabels} />
         </div>
       )}
     </div>

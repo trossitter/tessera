@@ -1,6 +1,7 @@
 import { type RefObject } from "react";
 import { Piece } from "./Piece";
-import type { Piece as PieceType } from "../workspace-state";
+import { FractionBlock } from "./FractionBlock";
+import type { Piece as PieceType, Denominator } from "../workspace-state";
 import { WHOLE_WIDTH } from "../workspace-state";
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
   canRedo: boolean;
   encouragement: string | null;
   showLabels: boolean;
+  snapPreview: { x: number; y: number; denominator: Denominator } | null;
   canvasRef: RefObject<HTMLDivElement | null>;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
@@ -26,6 +28,7 @@ export function Workspace({
   canRedo,
   encouragement,
   showLabels,
+  snapPreview,
   canvasRef,
   onMove,
   onRemove,
@@ -120,6 +123,23 @@ export function Workspace({
               onRemove={onRemove}
             />
           ))}
+
+          {/* Snap preview — shows exactly where dragged piece will land */}
+          {snapPreview && (
+            <div
+              style={{
+                position: "absolute",
+                left: snapPreview.x,
+                top: snapPreview.y,
+                opacity: 0.5,
+                pointerEvents: "none",
+                boxShadow: "0 0 0 2px rgba(30,107,107,0.7)",
+                borderRadius: 6,
+              }}
+            >
+              <FractionBlock denominator={snapPreview.denominator} showLabel={showLabels} />
+            </div>
+          )}
         </div>
       </div>
     </section>
