@@ -9,12 +9,14 @@ type Props = {
   canUndo: boolean;
   canRedo: boolean;
   encouragement: string | null;
+  showLabels: boolean;
   canvasRef: RefObject<HTMLDivElement | null>;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
   onUndo: () => void;
   onRedo: () => void;
   onClear: () => void;
+  onToggleLabels: () => void;
 };
 
 export function Workspace({
@@ -23,12 +25,14 @@ export function Workspace({
   canUndo,
   canRedo,
   encouragement,
+  showLabels,
   canvasRef,
   onMove,
   onRemove,
   onUndo,
   onRedo,
   onClear,
+  onToggleLabels,
 }: Props) {
   return (
     <section className="bg-paper rounded-lg shadow-sm border border-taupe overflow-hidden min-h-[400px] flex-1 flex flex-col">
@@ -59,6 +63,15 @@ export function Workspace({
           aria-label="redo"
         >
           redo →
+        </button>
+        <span className="flex-1" />
+        <button
+          type="button"
+          onClick={onToggleLabels}
+          className={`text-xs px-2 py-1 rounded transition-colors ${showLabels ? "bg-ink/10 text-ink" : "text-ink/40 hover:text-ink hover:bg-parchment"}`}
+          aria-label="toggle fraction labels"
+        >
+          ½
         </button>
       </div>
 
@@ -102,6 +115,7 @@ export function Workspace({
               key={piece.id}
               piece={piece}
               glowing={glowingIds.has(piece.id)}
+              showLabel={showLabels}
               onMove={onMove}
               onRemove={onRemove}
             />

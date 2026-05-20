@@ -7,24 +7,58 @@ const COLOR_BY_DENOM: Record<Denominator, string> = {
   8: "bg-eighth",
 };
 
+const LABEL_COLOR: Record<Denominator, string> = {
+  1: "rgba(255,255,255,0.85)",
+  2: "rgba(255,255,255,0.85)",
+  4: "rgba(26,46,42,0.65)",
+  8: "rgba(26,46,42,0.65)",
+};
+
+const LABEL: Record<Denominator, string> = {
+  1: "1", 2: "½", 4: "¼", 8: "⅛",
+};
+
 const PIECE_SHADOW =
   "inset 1px 0 0 0 rgba(0,0,0,0.18), inset -1px 0 0 0 rgba(0,0,0,0.18), 0 1px 2px 0 rgba(0,0,0,0.05)";
 
 type Props = {
   denominator: Denominator;
   scale?: number;
+  showLabel?: boolean;
 };
 
-export function FractionBlock({ denominator, scale = 1 }: Props) {
+export function FractionBlock({ denominator, scale = 1, showLabel = false }: Props) {
+  const h = PIECE_HEIGHT * scale;
   return (
     <div
       className={`${COLOR_BY_DENOM[denominator]} rounded-md`}
       style={{
         width: pieceWidth(denominator) * scale,
-        height: PIECE_HEIGHT * scale,
+        height: h,
         boxShadow: PIECE_SHADOW,
+        position: "relative",
       }}
       aria-label={denominator === 1 ? "one whole" : `one ${denominator}th`}
-    />
+    >
+      {showLabel && (
+        <span
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: Math.max(9, h * 0.38),
+            fontWeight: 700,
+            color: LABEL_COLOR[denominator],
+            letterSpacing: "0.01em",
+            userSelect: "none",
+            pointerEvents: "none",
+          }}
+        >
+          {LABEL[denominator]}
+        </span>
+      )}
+    </div>
   );
 }

@@ -8,11 +8,12 @@ const TAP_MAX_MS = 250;
 type Props = {
   piece: PieceType;
   glowing?: boolean;
+  showLabel?: boolean;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
 };
 
-export function Piece({ piece, glowing, onMove, onRemove }: Props) {
+export function Piece({ piece, glowing, showLabel, onMove, onRemove }: Props) {
   const startRef = useRef<{ pointerX: number; pointerY: number; time: number } | null>(null);
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
 
@@ -63,7 +64,7 @@ export function Piece({ piece, glowing, onMove, onRemove }: Props) {
         zIndex: drag ? 10 : 1,
       }}
     >
-      <FractionBlock denominator={piece.denominator} />
+      <FractionBlock denominator={piece.denominator} showLabel={showLabel} />
     </div>
   );
 }

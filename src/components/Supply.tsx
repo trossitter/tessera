@@ -3,14 +3,18 @@ import { FractionBlock } from "./FractionBlock";
 import { SUPPLY_DENOMS, type Denominator } from "../workspace-state";
 
 type Props = {
+  showLabels: boolean;
   onSpawn: (denominator: Denominator) => void;
   onDragStart: (denominator: Denominator, clientX: number, clientY: number) => void;
+  onDragMove: (clientX: number, clientY: number) => void;
+  onDragEnd: (clientX: number, clientY: number) => void;
+  onDragCancel: () => void;
 };
 
 const SUPPLY_SCALE = 0.5;
 const DRAG_THRESHOLD_PX = 6;
 
-export function Supply({ onSpawn, onDragStart }: Props) {
+export function Supply({ showLabels, onSpawn, onDragStart, onDragMove, onDragEnd, onDragCancel }: Props) {
   const pressRef = useRef<{
     denominator: Denominator;
     startX: number;
@@ -19,12 +23,17 @@ export function Supply({ onSpawn, onDragStart }: Props) {
   } | null>(null);
 
   const handlePointerDown = (e: React.PointerEvent, d: Denominator) => {
+    // Capture keeps all subsequent pointer events on this element — essential for smooth drag
     e.currentTarget.setPointerCapture(e.pointerId);
     pressRef.current = { denominator: d, startX: e.clientX, startY: e.clientY, dragging: false };
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!pressRef.current || pressRef.current.dragging) return;
+    if (!pressRef.current) return;
+    if (pressRef.current.dragging) {
+      onDragMove(e.clientX, e.clientY);
+      return;
+    }
     const dx = e.clientX - pressRef.current.startX;
     const dy = e.clientY - pressRef.current.startY;
     if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD_PX) {
@@ -33,13 +42,20 @@ export function Supply({ onSpawn, onDragStart }: Props) {
     }
   };
 
-  const handlePointerUp = (_e: React.PointerEvent, d: Denominator) => {
+  const handlePointerUp = (e: React.PointerEvent, d: Denominator) => {
     if (!pressRef.current) return;
-    if (!pressRef.current.dragging) onSpawn(d);
+    if (pressRef.current.dragging) {
+      onDragEnd(e.clientX, e.clientY);
+    } else {
+      onSpawn(d);
+    }
     pressRef.current = null;
   };
 
-  const handlePointerCancel = (_e: React.PointerEvent) => { pressRef.current = null; };
+  const handlePointerCancel = () => {
+    if (pressRef.current?.dragging) onDragCancel();
+    pressRef.current = null;
+  };
 
   return (
     <section className="bg-paper rounded-lg shadow-sm border border-taupe p-4 flex flex-col gap-3">
@@ -51,14 +67,14 @@ export function Supply({ onSpawn, onDragStart }: Props) {
               role="button"
               tabIndex={0}
               aria-label={`add one ${d === 1 ? "whole" : `${d}th`}`}
-              className="rounded-md cursor-grab active:cursor-grabbing touch-none"
+              className="rounded-md cursor-grab active:cursor-grabbing select-none"
               style={{ touchAction: "none" }}
               onPointerDown={(e) => handlePointerDown(e, d)}
               onPointerMove={handlePointerMove}
               onPointerUp={(e) => handlePointerUp(e, d)}
               onPointerCancel={handlePointerCancel}
             >
-              <FractionBlock denominator={d} scale={SUPPLY_SCALE} />
+              <FractionBlock denominator={d} scale={SUPPLY_SCALE} showLabel={showLabels} />
             </div>
           ))}
         </div>

@@ -65,12 +65,12 @@ export default function App() {
   const [challengeFinds, setChallengeFinds] = useState<{ label: string; config: number[]; formula: string }[]>([]);
 
   // --- supply drag ---
-  const [supplyDrag, setSupplyDrag] = useState<{
-    denominator: Denominator;
-    clientX: number;
-    clientY: number;
-  } | null>(null);
+  const supplyDenomRef = useRef<Denominator | null>(null);
+  const [supplyDragPos, setSupplyDragPos] = useState<{ clientX: number; clientY: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+
+  // --- labels toggle ---
+  const [showLabels, setShowLabels] = useState(false);
 
   // --- lesson engine ---
   const [lessonPhase, setLessonPhase] = useState(0);
@@ -138,37 +138,39 @@ export default function App() {
   };
 
   // --- supply drag handlers ---
+  // Pointer capture stays on the supply element throughout; events bubble here via callbacks.
 
   const handleDragStart = (denominator: Denominator, clientX: number, clientY: number) => {
-    setSupplyDrag({ denominator, clientX, clientY });
+    supplyDenomRef.current = denominator;
+    setSupplyDragPos({ clientX, clientY });
   };
 
-  const handleDragMove = (e: React.PointerEvent) => {
-    if (!supplyDrag) return;
-    setSupplyDrag(prev => prev ? { ...prev, clientX: e.clientX, clientY: e.clientY } : null);
+  const handleDragMove = (clientX: number, clientY: number) => {
+    setSupplyDragPos({ clientX, clientY });
   };
 
-  const handleDragDrop = (e: React.PointerEvent) => {
-    if (!supplyDrag) return;
+  const handleDragEnd = (clientX: number, clientY: number) => {
+    const denominator = supplyDenomRef.current;
+    supplyDenomRef.current = null;
+    setSupplyDragPos(null);
+    if (!denominator) return;
     const canvas = canvasRef.current;
-    if (canvas) {
-      const rect = canvas.getBoundingClientRect();
-      const relX = e.clientX - rect.left;
-      const relY = e.clientY - rect.top;
-      if (relX >= 0 && relX <= rect.width && relY >= 0 && relY <= rect.height) {
-        const w = pieceWidth(supplyDrag.denominator);
-        const snappedX = Math.max(0, Math.min(snap(relX - w / 2, SNAP_X), rect.width - w));
-        const snappedY = Math.max(SNAP_Y, Math.min(snap(relY - PIECE_HEIGHT / 2, SNAP_Y), LAST_ROW_Y));
-        dispatch({ type: "spawn_at", denominator: supplyDrag.denominator, x: snappedX, y: snappedY });
-      } else {
-        // Dropped outside workspace — fall back to auto-slot
-        dispatch({ type: "spawn", denominator: supplyDrag.denominator });
-      }
+    if (!canvas) { dispatch({ type: "spawn", denominator }); return; }
+    const rect = canvas.getBoundingClientRect();
+    if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+      const w = pieceWidth(denominator);
+      const snappedX = Math.max(0, Math.min(snap(clientX - rect.left - w / 2, SNAP_X), rect.width - w));
+      const snappedY = Math.max(SNAP_Y, Math.min(snap(clientY - rect.top - PIECE_HEIGHT / 2, SNAP_Y), LAST_ROW_Y));
+      dispatch({ type: "spawn_at", denominator, x: snappedX, y: snappedY });
+    } else {
+      dispatch({ type: "spawn", denominator });
     }
-    setSupplyDrag(null);
   };
 
-  const handleDragCancel = () => setSupplyDrag(null);
+  const handleDragCancel = () => {
+    supplyDenomRef.current = null;
+    setSupplyDragPos(null);
+  };
 
   const dismissSpawnCount = useRef(0);
   const handleDismissChallenge = () => {
@@ -379,12 +381,14 @@ export default function App() {
               canUndo={state.past.length > 0}
               canRedo={state.future.length > 0}
               encouragement={encouragement}
+              showLabels={showLabels}
               canvasRef={canvasRef}
               onMove={holdingConfig ? () => {} : handleMove}
               onRemove={holdingConfig ? () => {} : handleRemove}
               onUndo={() => dispatch({ type: "undo" })}
               onRedo={() => dispatch({ type: "redo" })}
               onClear={() => dispatch({ type: "clear" })}
+              onToggleLabels={() => setShowLabels(v => !v)}
             />
 
             {/* Challenge prompt — competes with the sandbox */}
@@ -454,7 +458,14 @@ export default function App() {
             )}
           </div>
 
-          <Supply onSpawn={handleSpawn} onDragStart={handleDragStart} />
+          <Supply
+            showLabels={showLabels}
+            onSpawn={handleSpawn}
+            onDragStart={handleDragStart}
+            onDragMove={handleDragMove}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          />
         </div>
 
         {/* Right panel — unified scroll: challenge status + finds + sandbox discoveries */}
@@ -511,27 +522,19 @@ export default function App() {
         </div>
       </main>
 
-      {/* Supply drag: invisible capture layer + ghost piece */}
-      {supplyDrag && (
-        <>
-          <div
-            className="fixed inset-0 z-30"
-            style={{ touchAction: "none" }}
-            onPointerMove={handleDragMove}
-            onPointerUp={handleDragDrop}
-            onPointerCancel={handleDragCancel}
-          />
-          <div
-            className="fixed pointer-events-none z-40"
-            style={{
-              left: supplyDrag.clientX - pieceWidth(supplyDrag.denominator) * 0.5 / 2,
-              top: supplyDrag.clientY - PIECE_HEIGHT * 0.5 / 2,
-              opacity: 0.82,
-            }}
-          >
-            <FractionBlock denominator={supplyDrag.denominator} scale={0.5} />
-          </div>
-        </>
+      {/* Supply drag ghost — follows the finger; no overlay needed (capture stays on supply element) */}
+      {supplyDragPos && supplyDenomRef.current && (
+        <div
+          className="fixed pointer-events-none z-50"
+          style={{
+            left: supplyDragPos.clientX - pieceWidth(supplyDenomRef.current) * 0.5 / 2,
+            top: supplyDragPos.clientY - PIECE_HEIGHT * 0.5 / 2,
+            opacity: 0.85,
+            filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.25))",
+          }}
+        >
+          <FractionBlock denominator={supplyDenomRef.current} scale={0.5} showLabel={showLabels} />
+        </div>
       )}
     </div>
   );
