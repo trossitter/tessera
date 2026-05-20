@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useRef, useState } from "react";
+import { useReducer, useEffect, useRef, useState, useCallback } from "react";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
 import { Discoveries } from "./components/Discoveries";
@@ -15,10 +15,11 @@ import {
 const GLOW_DURATION_MS = 1300;
 const ENCOURAGEMENT_DURATION_MS = 3500;
 
+// Challenge arc: composition → equivalence for parts → exhaust equivalences
 const CHALLENGES = [
-  { id: "half",       target: { num: 1, denom: 2 }, label: "1/2", required: 1 },
-  { id: "three-qtr", target: { num: 3, denom: 4 }, label: "3/4", required: 1 },
-  { id: "whole",     target: { num: 1, denom: 1 }, label: "1",   required: 1 },
+  { id: "three-qtr-compose", target: { num: 3, denom: 4 }, label: "3/4", required: 1 },
+  { id: "three-qtr-equiv",   target: { num: 3, denom: 4 }, label: "3/4", required: 2 },
+  { id: "half-exhaust",      target: { num: 1, denom: 2 }, label: "1/2", required: 3 },
 ] as const;
 
 const ENCOURAGEMENTS = [
@@ -33,21 +34,27 @@ function discoveryMatchesTarget(d: Discovery, target: { num: number; denom: numb
   return Math.abs(val - targetVal) < 1e-9;
 }
 
-type Phase = "sandbox" | "prompted" | "challenge";
+function labelConfig(config: number[]): string {
+  return config.map(d => d === 1 ? "1" : `1/${d}`).join(" + ");
+}
+
+type Phase = "sandbox" | "challenge";
+
+const LAST_ROW_Y = 64 * 8; // MAX_ROW_Y from workspace-state
 
 export default function App() {
   const [state, dispatch] = useReducer(workspaceReducer, initialWorkspace);
 
-  // --- phase & opt-in state ---
+  // --- phase & pill state ---
   const [phase, setPhase] = useState<Phase>("sandbox");
-  const [everPrompted, setEverPrompted] = useState(false);
-  const [spawnsSinceDismiss, setSpawnsSinceDismiss] = useState(0);
-  const [nudgeInterval, setNudgeInterval] = useState(50);
+  const [showPill, setShowPill] = useState(false);
+  const pillTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const workspacePillFired = useRef(false);
+  const discoveryPillFired = useRef(false);
 
   // --- challenge state ---
   const [challengeIndex, setChallengeIndex] = useState(0);
   const [acknowledgedIds, setAcknowledgedIds] = useState<string[]>([]);
-  const [pendingDiscovery, setPendingDiscovery] = useState<Discovery | null>(null);
 
   // --- visual fx ---
   const [glowingIds, setGlowingIds] = useState<Set<string>>(new Set());
@@ -55,40 +62,53 @@ export default function App() {
   const [encouragement, setEncouragement] = useState<string | null>(null);
   const encouragementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstSpawnRef = useRef(false);
+  const [guideMessage, setGuideMessage] = useState<string | null>(null);
+  const guideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // --- prompt trigger ---
+  // --- pill helpers ---
 
-  // Piece-count nudge only — fires at 50 → 25 → 12 → 6 → 3 spawns
+  const firePill = useCallback(() => {
+    setShowPill(true);
+    if (pillTimer.current) clearTimeout(pillTimer.current);
+    pillTimer.current = setTimeout(() => setShowPill(false), 6000);
+  }, []);
+
+  // Trigger 1: any piece reaches the last row — workspace is full
   useEffect(() => {
-    if (phase !== "sandbox") return;
-    if (spawnsSinceDismiss >= nudgeInterval) {
-      setPhase("prompted");
+    if (phase !== "sandbox" || workspacePillFired.current) return;
+    if (state.pieces.some(p => p.y >= LAST_ROW_Y)) {
+      workspacePillFired.current = true;
+      firePill();
     }
-  }, [spawnsSinceDismiss, nudgeInterval, phase]);
+  }, [state.pieces, phase, firePill]);
 
-  // --- opt-in handlers ---
+  // Trigger 2: child has found two distinct ways to make 1
+  useEffect(() => {
+    if (phase !== "sandbox" || discoveryPillFired.current) return;
+    const waysToOne = state.discoveries.filter(d =>
+      Math.abs(d.configA.reduce((s, n) => s + 1 / n, 0) - 1) < 1e-9
+    );
+    if (waysToOne.length >= 2) {
+      discoveryPillFired.current = true;
+      firePill();
+    }
+  }, [state.discoveries, phase, firePill]);
+
+  // --- opt-in handler ---
 
   const handleAcceptChallenge = () => {
+    if (pillTimer.current) clearTimeout(pillTimer.current);
+    setShowPill(false);
     dispatch({ type: "clear" });
     setPhase("challenge");
-    setEverPrompted(true);
-    setSpawnsSinceDismiss(0);
-  };
-
-  const handleDismissChallenge = () => {
-    setPhase("sandbox");
-    setEverPrompted(true);
-    setSpawnsSinceDismiss(0);
-    setNudgeInterval((prev) => Math.max(3, Math.floor(prev / 2)));
   };
 
   // --- workspace handlers ---
 
   const handleSpawn = (denominator: Denominator) => {
+    // Block spawn once workspace is full — last row occupied
+    if (state.pieces.some(p => p.y >= LAST_ROW_Y)) return;
     dispatch({ type: "spawn", denominator });
-    if (phase === "sandbox") {
-      setSpawnsSinceDismiss((prev) => prev + 1);
-    }
     // Zero-to-one encouragement on first piece placed
     if (!firstSpawnRef.current) {
       firstSpawnRef.current = true;
@@ -113,36 +133,37 @@ export default function App() {
 
   // --- challenge logic ---
 
-  // Detect new discovery matching current challenge
+  // Auto-credit any new discovery matching the current challenge.
+  // The act of construction is the demonstration of understanding.
   useEffect(() => {
-    if (phase !== "challenge" || pendingDiscovery) return;
+    if (phase !== "challenge") return;
     const current = CHALLENGES[challengeIndex];
     if (!current) return;
     const acknowledged = new Set(acknowledgedIds);
     for (const d of state.discoveries) {
       if (discoveryMatchesTarget(d, current.target) && !acknowledged.has(d.id)) {
-        setPendingDiscovery(d);
+        // Credit immediately — glow the pieces, name what the child found
+        const keyA = configKey(d.configA);
+        const keyB = configKey(d.configB);
+        const idsA = pieceIdsForConfig(state.pieces, keyA);
+        const idsB = pieceIdsForConfig(state.pieces, keyB);
+        setGlowingIds(new Set([...idsA, ...idsB]));
+        if (glowTimer.current) clearTimeout(glowTimer.current);
+        glowTimer.current = setTimeout(() => setGlowingIds(new Set()), GLOW_DURATION_MS);
+        setAcknowledgedIds(prev => [...prev, d.id]);
+        const msg = `you found that ${labelConfig(d.configA)} = ${labelConfig(d.configB)}.`;
+        setGuideMessage(msg);
+        if (guideTimer.current) clearTimeout(guideTimer.current);
+        guideTimer.current = setTimeout(() => setGuideMessage(null), 5000);
         return;
       }
     }
-  }, [state.discoveries, phase, challengeIndex, acknowledgedIds, pendingDiscovery]);
-
-  const handleSubmit = () => {
-    if (!pendingDiscovery) return;
-    const keyA = configKey(pendingDiscovery.configA);
-    const keyB = configKey(pendingDiscovery.configB);
-    const idsA = pieceIdsForConfig(state.pieces, keyA);
-    const idsB = pieceIdsForConfig(state.pieces, keyB);
-    setGlowingIds(new Set([...idsA, ...idsB]));
-    if (glowTimer.current) clearTimeout(glowTimer.current);
-    glowTimer.current = setTimeout(() => setGlowingIds(new Set()), GLOW_DURATION_MS);
-    setAcknowledgedIds((prev) => [...prev, pendingDiscovery.id]);
-    setPendingDiscovery(null);
-  };
+  }, [state.discoveries, phase, challengeIndex, acknowledgedIds]);
 
   const handleNext = () => {
     const nextIdx = challengeIndex + 1;
     dispatch({ type: "clear" });
+    setGuideMessage(null);
     if (nextIdx < CHALLENGES.length) {
       const nextChallenge = CHALLENGES[nextIdx];
       const autoAck = state.discoveries
@@ -153,7 +174,6 @@ export default function App() {
       setAcknowledgedIds([]);
     }
     setChallengeIndex(nextIdx);
-    setPendingDiscovery(null);
   };
 
   // --- keyboard undo/redo ---
@@ -177,7 +197,7 @@ export default function App() {
   const allDone = challengeIndex >= CHALLENGES.length;
   const required = currentChallenge?.required ?? 0;
   const foundCount = acknowledgedIds.length;
-  const challengeComplete = !allDone && !pendingDiscovery && foundCount >= required;
+  const challengeComplete = !allDone && foundCount >= required;
   const panelVisible = phase === "challenge" || state.discoveries.length > 0;
 
   return (
@@ -215,42 +235,50 @@ export default function App() {
               onClear={() => dispatch({ type: "clear" })}
             />
 
-            {/* Challenge opt-in overlay */}
-            {phase === "prompted" && (
+            {/* Guide attribution — names what the child just found */}
+            {guideMessage && phase === "challenge" && (
               <div
-                className="absolute inset-0 flex items-center justify-center rounded-lg z-10"
-                style={{
-                  background: "rgba(247,243,232,0.82)",
-                  backdropFilter: "blur(6px)",
-                }}
+                className="fade-in absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none"
+                style={{ zIndex: 8 }}
               >
-                <div
-                  className="bg-paper rounded-xl border border-taupe shadow-md flex flex-col gap-5 mx-4"
-                  style={{ padding: "28px 28px", maxWidth: 300, width: "100%" }}
+                <span style={{
+                  background: "rgba(30,107,107,0.08)",
+                  color: "#1e6b6b",
+                  fontSize: "0.78rem",
+                  fontWeight: 500,
+                  padding: "5px 16px",
+                  borderRadius: 20,
+                  letterSpacing: "0.02em",
+                }}>
+                  {guideMessage}
+                </span>
+              </div>
+            )}
+
+            {/* Challenge pill — fades in when triggered, tappable */}
+            {showPill && phase === "sandbox" && (
+              <div
+                className="fade-in absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none"
+                style={{ zIndex: 10 }}
+              >
+                <button
+                  type="button"
+                  onClick={handleAcceptChallenge}
+                  className="pointer-events-auto active:scale-95 transition-transform"
+                  style={{
+                    background: "rgba(30,107,107,0.10)",
+                    color: "#1e6b6b",
+                    border: "1px solid rgba(30,107,107,0.28)",
+                    borderRadius: 20,
+                    padding: "6px 20px",
+                    fontSize: "0.82rem",
+                    fontWeight: 500,
+                    letterSpacing: "0.02em",
+                    cursor: "pointer",
+                  }}
                 >
-                  <p className="text-lg text-ink font-medium leading-snug">
-                    {everPrompted
-                      ? "you deserve a challenge."
-                      : "ready for a challenge?"}
-                  </p>
-                  <div className="flex flex-col gap-2.5">
-                    <button
-                      type="button"
-                      onClick={handleAcceptChallenge}
-                      className="text-sm px-4 py-2.5 rounded-md font-medium transition-all active:scale-95"
-                      style={{ background: "#1e6b6b", color: "#f7f3e8" }}
-                    >
-                      take the challenge
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDismissChallenge}
-                      className="text-sm px-4 py-2.5 rounded-md text-ink/60 hover:text-ink hover:bg-parchment transition-all active:scale-95"
-                    >
-                      keep exploring
-                    </button>
-                  </div>
-                </div>
+                  try making {CHALLENGES[0].label}.
+                </button>
               </div>
             )}
           </div>
@@ -273,10 +301,8 @@ export default function App() {
                 label={currentChallenge?.label ?? ""}
                 required={required}
                 foundCount={foundCount}
-                canSubmit={!!pendingDiscovery && !challengeComplete}
                 complete={challengeComplete}
                 allDone={allDone}
-                onSubmit={handleSubmit}
                 onNext={handleNext}
               />
             </div>

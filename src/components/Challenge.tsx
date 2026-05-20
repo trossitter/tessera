@@ -4,10 +4,8 @@ type Props = {
   label: string;
   required: number;
   foundCount: number;
-  canSubmit: boolean;
   complete: boolean;
   allDone: boolean;
-  onSubmit: () => void;
   onNext: () => void;
 };
 
@@ -15,10 +13,8 @@ export function Challenge({
   label,
   required,
   foundCount,
-  canSubmit,
   complete,
   allDone,
-  onSubmit,
   onNext,
 }: Props) {
   const [celebrating, setCelebrating] = useState(false);
@@ -57,17 +53,6 @@ export function Challenge({
               {foundCount} of {required} found
             </span>
           </div>
-
-          {canSubmit && (
-            <button
-              type="button"
-              onClick={onSubmit}
-              className="self-start text-sm px-4 py-2 rounded-md active:scale-95 transition-all font-medium"
-              style={{ background: "#f5f0e0", color: "#8a6010", border: "1.5px solid #b8891e" }}
-            >
-              submit ✓
-            </button>
-          )}
 
           {complete && (
             <div className="flex flex-col gap-3 pt-1">
