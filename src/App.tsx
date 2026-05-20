@@ -153,20 +153,6 @@ export default function App() {
   // --- supply drag handlers ---
   // Pointer capture stays on the supply element throughout; events bubble here via callbacks.
 
-  // Find topmost row with space for a piece at column x
-  const topSlotInColumn = (denominator: Denominator, x: number): number => {
-    const w = pieceWidth(denominator);
-    for (let y = SNAP_Y; y <= LAST_ROW_Y; y += SNAP_Y) {
-      const collides = state.pieces.some(p => {
-        if (p.y !== y) return false;
-        const pw = pieceWidth(p.denominator);
-        return x < p.x + pw && p.x < x + w;
-      });
-      if (!collides) return y;
-    }
-    return SNAP_Y;
-  };
-
   const computeSnapPreview = (denominator: Denominator, clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) { setSnapPreview(null); return; }
@@ -174,8 +160,8 @@ export default function App() {
     if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
       const w = pieceWidth(denominator);
       const snappedX = Math.max(0, Math.min(snap(clientX - rect.left - w / 2, SNAP_X), rect.width - w));
-      const preferredY = topSlotInColumn(denominator, snappedX);
-      setSnapPreview({ x: snappedX, y: preferredY });
+      const snappedY = Math.max(SNAP_Y, Math.min(snap(clientY - rect.top - PIECE_HEIGHT / 2, SNAP_Y), LAST_ROW_Y));
+      setSnapPreview({ x: snappedX, y: snappedY });
     } else {
       setSnapPreview(null);
     }
@@ -205,8 +191,8 @@ export default function App() {
     if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
       const w = pieceWidth(denominator);
       const snappedX = Math.max(0, Math.min(snap(clientX - rect.left - w / 2, SNAP_X), rect.width - w));
-      const preferredY = topSlotInColumn(denominator, snappedX);
-      dispatch({ type: "spawn_at", denominator, x: snappedX, y: preferredY });
+      const snappedY = Math.max(SNAP_Y, Math.min(snap(clientY - rect.top - PIECE_HEIGHT / 2, SNAP_Y), LAST_ROW_Y));
+      dispatch({ type: "spawn_at", denominator, x: snappedX, y: snappedY });
     } else {
       dispatch({ type: "spawn", denominator });
     }
