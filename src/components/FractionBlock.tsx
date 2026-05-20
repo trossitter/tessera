@@ -12,15 +12,16 @@ const PIECE_SHADOW =
 
 type Props = {
   denominator: Denominator;
+  scale?: number;
 };
 
-export function FractionBlock({ denominator }: Props) {
+export function FractionBlock({ denominator, scale = 1 }: Props) {
   return (
     <div
       className={`${COLOR_BY_DENOM[denominator]} rounded-md`}
       style={{
-        width: pieceWidth(denominator),
-        height: PIECE_HEIGHT,
+        width: pieceWidth(denominator) * scale,
+        height: PIECE_HEIGHT * scale,
         boxShadow: PIECE_SHADOW,
       }}
       aria-label={denominator === 1 ? "one whole" : `one ${denominator}th`}

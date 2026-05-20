@@ -12,6 +12,22 @@ Tessera is a single-lesson web app teaching **fraction equivalence** to 9–11 y
 
 This inverts the American standard, which front-loads notation and procedure before intuition. That ordering is part of why fractions tend to feel harder than they need to be — by 4th grade, the notation arrives stale, attached to procedures memorized rather than understood. 9–11 is on the older end of the international range for fraction equivalence (Singapore Math: ~age 9; Montessori fraction insets: ages 5–6); the late introduction is symptomatic, not necessary.
 
+## Compression to point
+
+The lesson has a direction: from complexity to simplicity. The child begins in open exploration — many pieces, many arrangements, many possible moves. As understanding arrives, that complexity should visibly resolve.
+
+**The wrong shape:** a side panel slides in, appending discoveries to the right. The workspace shrinks. The child now sees *more* on screen, not less. This is the shape of accumulation, not insight.
+
+**The right shape:** when the lesson concludes, the entire context compresses into a single point — one equation, one symbol, the insight distilled. The workspace does not acquire a sidebar; it collapses. The child sees *less* on screen, which is the shape of understanding.
+
+This is how mathematics actually works. Infinite line segments, individually meaningless, can be held all at once as a single plane. A proof that requires twenty lemmas is eventually apprehended as one idea. Equivalence — 1/2 = 2/4 = 4/8 — is many arrangements resolved into one relationship.
+
+The UI must carry this structure. The transition from manipulation to mastery should feel like zooming out until many things become one thing — not like opening a drawer.
+
+**Implementation intent:** at lesson completion, the workspace does not gain a panel. It transitions — full screen — to the resolved form: the equivalence chain, large, centered, still. The manipulative has done its work and recedes. This is not a modal or a side panel; it is the lesson arriving at its destination.
+
+The right-panel slide-in used during early development is a placeholder mechanism with no pedagogical meaning and should be replaced before the experience is considered complete.
+
 ## Two layers
 
 | Layer | Tech | Role |

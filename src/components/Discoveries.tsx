@@ -23,8 +23,6 @@ function fmtFraction(f: { num: number; denom: number }): string {
   return `${f.num}/${f.denom}`;
 }
 
-// Show each piece as its own fraction joined by " + ".
-// [2, 4, 4] → "1/2 + 1/4 + 1/4"   [1] → "1"
 function configLabel(config: number[]): string {
   return config.map(d => d === 1 ? "1" : `1/${d}`).join(" + ");
 }
@@ -59,15 +57,13 @@ function DiscoveryRow({
     <button
       type="button"
       onClick={() => onReplay(discovery)}
-      className="flex flex-col gap-1.5 text-left w-full rounded-md px-2 py-1.5 -mx-2 hover:bg-parchment active:bg-parchment transition-colors"
+      className="flex flex-col gap-1 text-left w-full rounded-md px-2 py-1.5 -mx-2 hover:bg-parchment active:bg-parchment transition-colors"
       aria-label="tap to show this in the workspace"
     >
-      <div className="flex items-center gap-2">
-        <ConfigBar config={discovery.configA} />
-        <span className="text-ink/60 text-sm">=</span>
-        <ConfigBar config={discovery.configB} />
-      </div>
-      <div className="text-xs text-ink/70 font-medium">
+      <ConfigBar config={discovery.configA} />
+      <span className="text-ink/40 text-xs leading-none pl-2">=</span>
+      <ConfigBar config={discovery.configB} />
+      <div className="text-xs text-ink/70 font-medium pt-0.5">
         {configLabel(discovery.configA)} = {configLabel(discovery.configB)}
       </div>
     </button>

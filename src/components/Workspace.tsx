@@ -1,5 +1,6 @@
 import { Piece } from "./Piece";
 import type { Piece as PieceType } from "../workspace-state";
+import { WHOLE_WIDTH } from "../workspace-state";
 
 type Props = {
   pieces: PieceType[];
@@ -58,48 +59,51 @@ export function Workspace({
         </button>
       </div>
 
-      <div className="relative flex-1">
-        {/* Encouragement toast */}
-        {encouragement && (
-          <div
-            className="encouragement-toast"
-            style={{
-              position: "absolute",
-              top: 12,
-              left: 0,
-              right: 0,
-              display: "flex",
-              justifyContent: "center",
-              pointerEvents: "none",
-              zIndex: 5,
-            }}
-          >
-            <span
+      {/* Centered 640px coordinate canvas — pieces are positioned relative to this */}
+      <div className="flex-1 flex justify-center overflow-hidden">
+        <div className="relative" style={{ width: WHOLE_WIDTH }}>
+          {/* Encouragement toast */}
+          {encouragement && (
+            <div
+              className="encouragement-toast"
               style={{
-                background: "rgba(30,107,107,0.10)",
-                color: "#1e6b6b",
-                fontSize: "0.8rem",
-                fontWeight: 500,
-                padding: "4px 14px",
-                borderRadius: 20,
-                letterSpacing: "0.02em",
+                position: "absolute",
+                top: 12,
+                left: 0,
+                right: 0,
+                display: "flex",
+                justifyContent: "center",
+                pointerEvents: "none",
+                zIndex: 5,
               }}
             >
-              {encouragement}
-            </span>
-          </div>
-        )}
+              <span
+                style={{
+                  background: "rgba(30,107,107,0.10)",
+                  color: "#1e6b6b",
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  padding: "4px 14px",
+                  borderRadius: 20,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {encouragement}
+              </span>
+            </div>
+          )}
 
-        {/* Pieces */}
-        {pieces.map((piece) => (
-          <Piece
-            key={piece.id}
-            piece={piece}
-            glowing={glowingIds.has(piece.id)}
-            onMove={onMove}
-            onRemove={onRemove}
-          />
-        ))}
+          {/* Pieces */}
+          {pieces.map((piece) => (
+            <Piece
+              key={piece.id}
+              piece={piece}
+              glowing={glowingIds.has(piece.id)}
+              onMove={onMove}
+              onRemove={onRemove}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
