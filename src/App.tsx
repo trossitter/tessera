@@ -1,4 +1,6 @@
 import { useReducer, useEffect, useRef, useState, useCallback } from "react";
+import { LESSON_SCRIPT } from "./lesson/script";
+import { playSnap } from "./sounds";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
 import { Discoveries } from "./components/Discoveries";
@@ -34,28 +36,34 @@ type Phase = "sandbox" | "challenge";
 
 const LAST_ROW_Y = 64 * 8; // MAX_ROW_Y from workspace-state
 
+const TILE_PX = 360;
+
 export default function App() {
   const [state, dispatch] = useReducer(workspaceReducer, initialWorkspace);
 
-  // --- entrance animation ---
+  // --- entrance animation (20% faster than original 2.2s) ---
   const [showEntrance, setShowEntrance] = useState(true);
   const [entranceFading, setEntranceFading] = useState(false);
   useEffect(() => {
-    const fade = setTimeout(() => setEntranceFading(true), 900);
-    const gone = setTimeout(() => setShowEntrance(false), 1350);
+    const fade = setTimeout(() => setEntranceFading(true), 2300);
+    const gone = setTimeout(() => setShowEntrance(false), 2900);
     return () => { clearTimeout(fade); clearTimeout(gone); };
   }, []);
 
   // --- phase & pill state ---
   const [phase, setPhase] = useState<Phase>("sandbox");
   const [showPill, setShowPill] = useState(false);
-  const pillTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const workspacePillFired = useRef(false);
   const discoveryPillFired = useRef(false);
 
   // --- challenge state ---
   const [challengeIndex, setChallengeIndex] = useState(0);
-  const [challengeCredits, setChallengeCredits] = useState<string[]>([]); // configKeys of credited arrangements
+  const [challengeCredits, setChallengeCredits] = useState<string[]>([]);
+  const [holdingConfig, setHoldingConfig] = useState<number[] | null>(null); // row awaiting acknowledgment
+  const [challengeFinds, setChallengeFinds] = useState<{ label: string; config: number[]; formula: string }[]>([]);
+
+  // --- lesson engine ---
+  const [lessonPhase, setLessonPhase] = useState(0);
 
   // --- visual fx ---
   const [glowingIds, setGlowingIds] = useState<Set<string>>(new Set());
@@ -63,15 +71,11 @@ export default function App() {
   const [encouragement, setEncouragement] = useState<string | null>(null);
   const encouragementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstSpawnRef = useRef(false);
-  const [guideMessage, setGuideMessage] = useState<string | null>(null);
-  const guideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // --- pill helpers ---
 
   const firePill = useCallback(() => {
-    setShowPill(true);
-    if (pillTimer.current) clearTimeout(pillTimer.current);
-    pillTimer.current = setTimeout(() => setShowPill(false), 6000);
+    setShowPill(true); // stays until child chooses
   }, []);
 
   // Trigger 1: any piece reaches the last row — workspace is full
@@ -95,24 +99,57 @@ export default function App() {
     }
   }, [state.discoveries, phase, firePill]);
 
-  // --- opt-in handler ---
+  // --- lesson engine advancement ---
+
+  // first_interaction: silence → exploration_prompt
+  // (fired in handleSpawn when firstSpawnRef first trips)
+
+  // discovered_half_equals_two_quarters
+  useEffect(() => {
+    if (lessonPhase !== 1) return;
+    const found = state.discoveries.some(d =>
+      d.configA.length === 1 && d.configA[0] === 2 &&
+      d.configB.length === 2 && d.configB[0] === 4 && d.configB[1] === 4
+    );
+    if (found) setLessonPhase(2);
+  }, [state.discoveries, lessonPhase]);
+
+  // task_complete: practice → complete
+  // (fired in handleNext when challenges are finished)
+
+  const handleAdvanceLesson = () => setLessonPhase(p => p + 1);
+
+  // --- opt-in handlers ---
 
   const handleAcceptChallenge = () => {
-    if (pillTimer.current) clearTimeout(pillTimer.current);
     setShowPill(false);
     dispatch({ type: "clear" });
     setPhase("challenge");
   };
 
+  const dismissSpawnCount = useRef(0);
+  const handleDismissChallenge = () => {
+    setShowPill(false);
+    dismissSpawnCount.current = 0; // reset counter — re-prompt after 10 more pieces
+  };
+
   // --- workspace handlers ---
 
   const handleSpawn = (denominator: Denominator) => {
-    // Block spawn once workspace is full — last row occupied
     if (state.pieces.some(p => p.y >= LAST_ROW_Y)) return;
+    if (holdingConfig) return;
     dispatch({ type: "spawn", denominator });
-    // Zero-to-one encouragement on first piece placed
+    // Re-prompt after dismissal: every 10 pieces
+    if (!showPill && (workspacePillFired.current || discoveryPillFired.current)) {
+      dismissSpawnCount.current += 1;
+      if (dismissSpawnCount.current >= 10) {
+        dismissSpawnCount.current = 0;
+        setShowPill(true);
+      }
+    }
     if (!firstSpawnRef.current) {
       firstSpawnRef.current = true;
+      setLessonPhase(p => p === 0 ? 1 : p); // silence → exploration_prompt
       const msg = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
       setEncouragement(msg);
       if (encouragementTimer.current) clearTimeout(encouragementTimer.current);
@@ -134,10 +171,10 @@ export default function App() {
 
   // --- challenge logic ---
 
-  // Single-row detection: credit as soon as the child builds any filled row
-  // summing to the challenge target. One row = one demonstration = one credit.
+  // Detection: when a filled row sums to the target, enter hold state.
+  // The child must acknowledge by tapping the fraction pill before continuing.
   useEffect(() => {
-    if (phase !== "challenge") return;
+    if (phase !== "challenge" || holdingConfig) return;
     const current = CHALLENGES[challengeIndex];
     if (!current) return;
     const targetVal = current.target.num / current.target.denom;
@@ -146,29 +183,41 @@ export default function App() {
       if (Math.abs(row.sum - targetVal) < 1e-9) {
         const key = configKey(row.config);
         if (!credited.has(key)) {
+          // Glow the matching pieces and hold — wait for child's acknowledgment
           const ids = pieceIdsForConfig(state.pieces, key);
           setGlowingIds(new Set(ids));
-          if (glowTimer.current) clearTimeout(glowTimer.current);
-          glowTimer.current = setTimeout(() => setGlowingIds(new Set()), GLOW_DURATION_MS);
-          setChallengeCredits(prev => [...prev, key]);
-          const msg = credited.size === 0
-            ? `you made ${current.label}.`
-            : `you found another way to make ${current.label}.`;
-          setGuideMessage(msg);
-          if (guideTimer.current) clearTimeout(guideTimer.current);
-          guideTimer.current = setTimeout(() => setGuideMessage(null), 5000);
+          setHoldingConfig(row.config);
           return;
         }
       }
     }
-  }, [state.pieces, phase, challengeIndex, challengeCredits]);
+  }, [state.pieces, phase, challengeIndex, challengeCredits, holdingConfig]);
+
+  // Child taps the fraction pill — acknowledges what they built
+  const handleAcknowledge = () => {
+    if (!holdingConfig) return;
+    const current = CHALLENGES[challengeIndex];
+    if (!current) return;
+    const key = configKey(holdingConfig);
+    playSnap(0.25);
+    setChallengeCredits(prev => [...prev, key]);
+    setChallengeFinds(prev => [{
+      label: current.label,
+      config: holdingConfig,
+      formula: holdingConfig.map(d => d === 1 ? "1" : `1/${d}`).join(" + "),
+    }, ...prev]);
+    setHoldingConfig(null);
+    if (glowTimer.current) clearTimeout(glowTimer.current);
+    glowTimer.current = setTimeout(() => setGlowingIds(new Set()), GLOW_DURATION_MS);
+  };
 
   const handleNext = () => {
     const nextIdx = challengeIndex + 1;
     dispatch({ type: "clear" });
-    setGuideMessage(null);
+    setHoldingConfig(null);
     setChallengeCredits([]);
     setChallengeIndex(nextIdx);
+    if (nextIdx >= CHALLENGES.length) setLessonPhase(p => Math.max(p, 6)); // task_complete
   };
 
   // --- keyboard undo/redo ---
@@ -193,35 +242,40 @@ export default function App() {
   const required = currentChallenge?.required ?? 0;
   const foundCount = challengeCredits.length;
   const challengeComplete = !allDone && foundCount >= required;
-  const panelVisible = phase === "challenge" || state.discoveries.length > 0;
+  const panelVisible = phase === "challenge" || state.discoveries.length > 0 || challengeFinds.length > 0;
 
-  const TILE = 200; // px per quadrant
-  const IMG = TILE * 2; // full image render size
+  const currentLesson = LESSON_SCRIPT[lessonPhase];
+  const lessonLines = currentLesson?.guideLines ?? [];
+  const lessonNeedsReady = currentLesson?.advance.kind === "user_ready";
+
+  const FIND_COLORS: Record<number, string> = {
+    1: "bg-whole", 2: "bg-half", 4: "bg-quarter", 8: "bg-eighth",
+  };
 
   return (
     <div className="h-full flex flex-col bg-parchment">
 
-      {/* Entrance animation — 4 quadrants fly in from corners */}
+      {/* Entrance — 4 quadrants close into one centered image */}
       {showEntrance && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50 bg-parchment"
-          style={{ transition: "opacity 450ms ease-out", opacity: entranceFading ? 0 : 1 }}
+          className="fixed inset-0 z-50 bg-parchment flex items-center justify-center"
+          style={{ transition: "opacity 600ms ease-out", opacity: entranceFading ? 0 : 1 }}
         >
-          <div style={{ display: "grid", gridTemplateColumns: `${TILE}px ${TILE}px`, gap: 0 }}>
-            {([
+          <div style={{ display: "grid", gridTemplateColumns: `${TILE_PX}px ${TILE_PX}px`, gap: 0 }}>
+            {[
               ["entrance-tl", "0px 0px"],
-              ["entrance-tr", `-${TILE}px 0px`],
-              ["entrance-bl", `0px -${TILE}px`],
-              ["entrance-br", `-${TILE}px -${TILE}px`],
-            ] as const).map(([cls, pos]) => (
+              ["entrance-tr", `-${TILE_PX}px 0px`],
+              ["entrance-bl", `0px -${TILE_PX}px`],
+              ["entrance-br", `-${TILE_PX}px -${TILE_PX}px`],
+            ].map(([cls, pos]) => (
               <div
                 key={cls}
                 className={cls}
                 style={{
-                  width: TILE,
-                  height: TILE,
+                  width: TILE_PX,
+                  height: TILE_PX,
                   backgroundImage: "url(/assets/tessera3.png)",
-                  backgroundSize: `${IMG}px ${IMG}px`,
+                  backgroundSize: `${TILE_PX * 2}px ${TILE_PX * 2}px`,
                   backgroundPosition: pos,
                 }}
               />
@@ -255,7 +309,26 @@ export default function App() {
 
       <main className="flex-1 flex gap-4 p-4 min-h-0">
         <div className="flex flex-col gap-4 min-h-0 flex-1 min-w-0">
-          {/* Workspace wrapper — relative so the opt-in overlay can be positioned over it */}
+
+          {/* Lesson guide voice */}
+          {lessonLines.length > 0 && (
+            <div className="fade-in bg-paper rounded-lg border border-taupe px-4 py-3 flex flex-col gap-1.5">
+              {lessonLines.map((line, i) => (
+                <p key={i} className="text-sm text-ink/80 leading-snug italic">{line}</p>
+              ))}
+              {lessonNeedsReady && (
+                <button
+                  type="button"
+                  onClick={handleAdvanceLesson}
+                  className="self-start text-xs text-ink/40 hover:text-ink/70 transition-colors pt-1"
+                >
+                  continue →
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Workspace */}
           <div className="relative flex-1 min-h-0 flex flex-col">
             <Workspace
               pieces={state.pieces}
@@ -263,56 +336,75 @@ export default function App() {
               canUndo={state.past.length > 0}
               canRedo={state.future.length > 0}
               encouragement={encouragement}
-              onMove={handleMove}
-              onRemove={handleRemove}
+              onMove={holdingConfig ? () => {} : handleMove}
+              onRemove={holdingConfig ? () => {} : handleRemove}
               onUndo={() => dispatch({ type: "undo" })}
               onRedo={() => dispatch({ type: "redo" })}
               onClear={() => dispatch({ type: "clear" })}
             />
 
-            {/* Guide attribution — names what the child just found */}
-            {guideMessage && phase === "challenge" && (
+            {/* Challenge prompt — competes with the sandbox */}
+            {showPill && phase === "sandbox" && (
               <div
-                className="fade-in absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none"
-                style={{ zIndex: 8 }}
+                className="absolute inset-0 flex items-center justify-center rounded-lg z-10"
+                style={{ background: "rgba(247,243,232,0.90)", backdropFilter: "blur(8px)" }}
               >
-                <span style={{
-                  background: "rgba(30,107,107,0.08)",
-                  color: "#1e6b6b",
-                  fontSize: "0.78rem",
-                  fontWeight: 500,
-                  padding: "5px 16px",
-                  borderRadius: 20,
-                  letterSpacing: "0.02em",
-                }}>
-                  {guideMessage}
-                </span>
+                <div
+                  className="bg-paper rounded-xl border border-taupe shadow-lg flex flex-col gap-6 mx-6 fade-in"
+                  style={{ padding: "36px 32px", maxWidth: 340, width: "100%" }}
+                >
+                  <div className="flex flex-col gap-2">
+                    <p className="text-3xl font-bold text-ink tracking-widest uppercase leading-tight">
+                      making {CHALLENGES[0].label}.
+                    </p>
+                    <p className="text-sm text-ink/50 tracking-wide">clear the workspace. pick a target.</p>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      type="button"
+                      onClick={handleAcceptChallenge}
+                      className="text-sm px-5 py-3 rounded-lg font-bold tracking-widest uppercase transition-all active:scale-95"
+                      style={{ background: "#1e6b6b", color: "#f7f3e8", fontFamily: "inherit" }}
+                    >
+                      take the challenge →
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDismissChallenge}
+                      className="text-sm px-5 py-2.5 rounded-lg text-ink/50 tracking-wide hover:text-ink hover:bg-parchment transition-all active:scale-95"
+                      style={{ fontFamily: "inherit" }}
+                    >
+                      keep exploring
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Challenge pill — fades in when triggered, tappable */}
-            {showPill && phase === "sandbox" && (
+            {/* Hold state — child must tap their fraction to send it to the panel */}
+            {holdingConfig && phase === "challenge" && (
               <div
-                className="fade-in absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none"
-                style={{ zIndex: 10 }}
+                className="absolute inset-0 flex items-end justify-center pb-10 z-10"
+                style={{ pointerEvents: "none" }}
               >
                 <button
                   type="button"
-                  onClick={handleAcceptChallenge}
-                  className="pointer-events-auto active:scale-95 transition-transform"
+                  onClick={handleAcknowledge}
+                  className="fade-in pointer-events-auto active:scale-95 transition-transform"
                   style={{
-                    background: "rgba(30,107,107,0.10)",
-                    color: "#1e6b6b",
-                    border: "1px solid rgba(30,107,107,0.28)",
-                    borderRadius: 20,
-                    padding: "6px 20px",
-                    fontSize: "0.82rem",
-                    fontWeight: 500,
+                    background: "#1e6b6b",
+                    color: "#f7f3e8",
+                    border: "none",
+                    borderRadius: 32,
+                    padding: "14px 40px",
+                    fontSize: "1.8rem",
+                    fontWeight: 600,
                     letterSpacing: "0.02em",
                     cursor: "pointer",
+                    boxShadow: "0 6px 28px rgba(30,107,107,0.35)",
                   }}
                 >
-                  try making {CHALLENGES[0].label}.
+                  {currentChallenge?.label ?? ""}
                 </button>
               </div>
             )}
@@ -321,28 +413,57 @@ export default function App() {
           <Supply onSpawn={handleSpawn} />
         </div>
 
-        {/* Right panel: slides in on first discovery or when in challenge mode */}
+        {/* Right panel — unified scroll: challenge status + finds + sandbox discoveries */}
         <div
-          className="flex flex-col gap-4 min-h-0 overflow-hidden shrink-0"
+          className="flex flex-col min-h-0 overflow-hidden shrink-0"
           style={{
             width: panelVisible ? "32%" : "0",
             opacity: panelVisible ? 1 : 0,
             transition: "width 700ms ease-in-out, opacity 600ms ease-in-out",
           }}
         >
-          {phase === "challenge" && (
-            <div className="fade-in">
-              <Challenge
-                label={currentChallenge?.label ?? ""}
-                required={required}
-                foundCount={foundCount}
-                complete={challengeComplete}
-                allDone={allDone}
-                onNext={handleNext}
-              />
-            </div>
-          )}
-          <Discoveries discoveries={state.discoveries} onReplay={handleReplay} />
+          <div className="flex flex-col gap-3 min-h-0 overflow-y-auto">
+            {phase === "challenge" && (
+              <div className="fade-in">
+                <Challenge
+                  label={currentChallenge?.label ?? ""}
+                  required={required}
+                  foundCount={foundCount}
+                  complete={challengeComplete}
+                  allDone={allDone}
+                  onNext={handleNext}
+                />
+              </div>
+            )}
+
+            {/* Challenge finds — most recent first */}
+            {challengeFinds.map((find, i) => (
+              <section
+                key={i}
+                className="fade-in bg-paper rounded-lg shadow-sm border border-taupe p-4 flex flex-col gap-2"
+              >
+                <header className="text-xs tracking-widest text-ink/50 uppercase border-b border-taupe pb-2">
+                  making {find.label}
+                </header>
+                <div className="flex pt-1">
+                  {find.config.map((denom, j) => (
+                    <div
+                      key={j}
+                      className={`${FIND_COLORS[denom] ?? "bg-taupe"} rounded-sm`}
+                      style={{
+                        width: 220 / denom,
+                        height: 22,
+                        boxShadow: "inset 1px 0 0 0 rgba(0,0,0,0.18), inset -1px 0 0 0 rgba(0,0,0,0.18)",
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="text-xs text-ink/70 font-medium">{find.formula}</div>
+              </section>
+            ))}
+
+            <Discoveries discoveries={state.discoveries} onReplay={handleReplay} />
+          </div>
         </div>
       </main>
     </div>

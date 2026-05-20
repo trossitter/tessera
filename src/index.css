@@ -8,11 +8,11 @@
   --color-taupe: #c4b89e;
   --color-gold: #b8882a;
 
-  /* fraction pieces — tessera3 only: terracotta corner, deep teal, bright teal */
-  --color-whole: #c07840;    /* terracotta corner of tessera3 */
-  --color-half: #216858;     /* deep forest teal, tessera3 upper-left */
-  --color-quarter: #3aaa96;  /* bright turquoise, tessera3 */
-  --color-eighth: #78c4ba;   /* lightest teal highlight */
+  /* fraction pieces — four distinct hue families from tessera3 palette */
+  --color-whole: #c07840;    /* terracotta / rust */
+  --color-half: #216858;     /* deep forest teal */
+  --color-quarter: #b8882a;  /* amber / gold — different hue entirely */
+  --color-eighth: #78c4ba;   /* sky teal — light, cool */
 }
 
 @keyframes fade-in {
@@ -57,7 +57,7 @@
   animation: encouragement-in-out 3.5s ease-in-out forwards;
 }
 
-/* Entrance animation — tessera3 splits into 4 quadrants, each flies in from its corner */
+/* Entrance — 4 quadrants of tessera3 fly in from corners and close into one image */
 @keyframes fly-tl {
   from { transform: translate(-160px, -160px); opacity: 0; }
   to   { transform: translate(0, 0);           opacity: 1; }
@@ -74,11 +74,10 @@
   from { transform: translate(160px, 160px);   opacity: 0; }
   to   { transform: translate(0, 0);           opacity: 1; }
 }
-
-.entrance-tl { animation: fly-tl 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-.entrance-tr { animation: fly-tr 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-.entrance-bl { animation: fly-bl 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-.entrance-br { animation: fly-br 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.entrance-tl { animation: fly-tl 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.entrance-tr { animation: fly-tr 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.entrance-bl { animation: fly-bl 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.entrance-br { animation: fly-br 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 
 html, body, #root {
   height: 100%;
