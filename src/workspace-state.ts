@@ -46,6 +46,7 @@ export const initialWorkspace: WorkspaceState = {
 
 export type WorkspaceAction =
   | { type: "spawn"; denominator: Denominator }
+  | { type: "spawn_at"; denominator: Denominator; x: number; y: number }
   | { type: "move"; id: string; x: number; y: number }
   | { type: "remove"; id: string }
   | { type: "clear" }
@@ -271,6 +272,14 @@ export function workspaceReducer(
       const nextPieces = [
         ...state.pieces,
         { id, denominator: action.denominator, x: slot.x, y: slot.y },
+      ];
+      return applyMutation(state, nextPieces, state.nextId + 1);
+    }
+    case "spawn_at": {
+      const id = `piece-${state.nextId}`;
+      const nextPieces = [
+        ...state.pieces,
+        { id, denominator: action.denominator, x: action.x, y: action.y },
       ];
       return applyMutation(state, nextPieces, state.nextId + 1);
     }

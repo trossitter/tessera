@@ -1,3 +1,4 @@
+import { type RefObject } from "react";
 import { Piece } from "./Piece";
 import type { Piece as PieceType } from "../workspace-state";
 import { WHOLE_WIDTH } from "../workspace-state";
@@ -8,6 +9,7 @@ type Props = {
   canUndo: boolean;
   canRedo: boolean;
   encouragement: string | null;
+  canvasRef: RefObject<HTMLDivElement | null>;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
   onUndo: () => void;
@@ -21,6 +23,7 @@ export function Workspace({
   canUndo,
   canRedo,
   encouragement,
+  canvasRef,
   onMove,
   onRemove,
   onUndo,
@@ -61,7 +64,7 @@ export function Workspace({
 
       {/* Centered 640px coordinate canvas — pieces are positioned relative to this */}
       <div className="flex-1 flex justify-center overflow-hidden">
-        <div className="relative" style={{ width: WHOLE_WIDTH }}>
+        <div ref={canvasRef} className="relative" style={{ width: WHOLE_WIDTH }}>
           {/* Encouragement toast */}
           {encouragement && (
             <div

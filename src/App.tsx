@@ -1,10 +1,12 @@
 import { useReducer, useEffect, useRef, useState, useCallback } from "react";
 import { LESSON_SCRIPT } from "./lesson/script";
 import { playSnap } from "./sounds";
+import { pieceWidth, PIECE_HEIGHT, snap, SNAP_X, SNAP_Y } from "./workspace-state";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
 import { Discoveries } from "./components/Discoveries";
 import { Challenge } from "./components/Challenge";
+import { FractionBlock } from "./components/FractionBlock";
 import {
   initialWorkspace,
   workspaceReducer,
@@ -61,6 +63,14 @@ export default function App() {
   const [challengeCredits, setChallengeCredits] = useState<string[]>([]);
   const [holdingConfig, setHoldingConfig] = useState<number[] | null>(null); // row awaiting acknowledgment
   const [challengeFinds, setChallengeFinds] = useState<{ label: string; config: number[]; formula: string }[]>([]);
+
+  // --- supply drag ---
+  const [supplyDrag, setSupplyDrag] = useState<{
+    denominator: Denominator;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
 
   // --- lesson engine ---
   const [lessonPhase, setLessonPhase] = useState(0);
@@ -126,6 +136,39 @@ export default function App() {
     dispatch({ type: "clear" });
     setPhase("challenge");
   };
+
+  // --- supply drag handlers ---
+
+  const handleDragStart = (denominator: Denominator, clientX: number, clientY: number) => {
+    setSupplyDrag({ denominator, clientX, clientY });
+  };
+
+  const handleDragMove = (e: React.PointerEvent) => {
+    if (!supplyDrag) return;
+    setSupplyDrag(prev => prev ? { ...prev, clientX: e.clientX, clientY: e.clientY } : null);
+  };
+
+  const handleDragDrop = (e: React.PointerEvent) => {
+    if (!supplyDrag) return;
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const relX = e.clientX - rect.left;
+      const relY = e.clientY - rect.top;
+      if (relX >= 0 && relX <= rect.width && relY >= 0 && relY <= rect.height) {
+        const w = pieceWidth(supplyDrag.denominator);
+        const snappedX = Math.max(0, Math.min(snap(relX - w / 2, SNAP_X), rect.width - w));
+        const snappedY = Math.max(SNAP_Y, Math.min(snap(relY - PIECE_HEIGHT / 2, SNAP_Y), LAST_ROW_Y));
+        dispatch({ type: "spawn_at", denominator: supplyDrag.denominator, x: snappedX, y: snappedY });
+      } else {
+        // Dropped outside workspace — fall back to auto-slot
+        dispatch({ type: "spawn", denominator: supplyDrag.denominator });
+      }
+    }
+    setSupplyDrag(null);
+  };
+
+  const handleDragCancel = () => setSupplyDrag(null);
 
   const dismissSpawnCount = useRef(0);
   const handleDismissChallenge = () => {
@@ -336,6 +379,7 @@ export default function App() {
               canUndo={state.past.length > 0}
               canRedo={state.future.length > 0}
               encouragement={encouragement}
+              canvasRef={canvasRef}
               onMove={holdingConfig ? () => {} : handleMove}
               onRemove={holdingConfig ? () => {} : handleRemove}
               onUndo={() => dispatch({ type: "undo" })}
@@ -410,7 +454,7 @@ export default function App() {
             )}
           </div>
 
-          <Supply onSpawn={handleSpawn} />
+          <Supply onSpawn={handleSpawn} onDragStart={handleDragStart} />
         </div>
 
         {/* Right panel — unified scroll: challenge status + finds + sandbox discoveries */}
@@ -466,6 +510,29 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* Supply drag: invisible capture layer + ghost piece */}
+      {supplyDrag && (
+        <>
+          <div
+            className="fixed inset-0 z-30"
+            style={{ touchAction: "none" }}
+            onPointerMove={handleDragMove}
+            onPointerUp={handleDragDrop}
+            onPointerCancel={handleDragCancel}
+          />
+          <div
+            className="fixed pointer-events-none z-40"
+            style={{
+              left: supplyDrag.clientX - pieceWidth(supplyDrag.denominator) * 0.5 / 2,
+              top: supplyDrag.clientY - PIECE_HEIGHT * 0.5 / 2,
+              opacity: 0.82,
+            }}
+          >
+            <FractionBlock denominator={supplyDrag.denominator} scale={0.5} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

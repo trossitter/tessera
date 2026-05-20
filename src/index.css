@@ -11,7 +11,7 @@
   /* fraction pieces — four distinct hue families from tessera3 palette */
   --color-whole: #c07840;    /* terracotta / rust */
   --color-half: #216858;     /* deep forest teal */
-  --color-quarter: #b8882a;  /* amber / gold — different hue entirely */
+  --color-quarter: #e8d5c4;  /* warm cream / blush — distinct from parchment, soft contrast */
   --color-eighth: #78c4ba;   /* sky teal — light, cool */
 }
 
