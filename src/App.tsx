@@ -253,7 +253,10 @@ export default function App() {
     }, ...prev]);
     setHoldingConfig(null);
     if (glowTimer.current) clearTimeout(glowTimer.current);
-    glowTimer.current = setTimeout(() => setGlowingIds(new Set()), GLOW_DURATION_MS);
+    glowTimer.current = setTimeout(() => {
+      setGlowingIds(new Set());
+      dispatch({ type: "clear" }); // pieces glow, then workspace sweeps clean
+    }, GLOW_DURATION_MS);
   };
 
   const handleNext = () => {
