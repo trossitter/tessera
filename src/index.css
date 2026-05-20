@@ -38,9 +38,9 @@
 }
 
 @keyframes piece-glow {
-  0%   { box-shadow: 0 0 0 2px rgba(255, 198, 88, 0.9); }
-  60%  { box-shadow: 0 0 0 10px rgba(255, 198, 88, 0.3); }
-  100% { box-shadow: 0 0 0 18px rgba(255, 198, 88, 0); }
+  0%   { box-shadow: 0 0 6px 2px rgba(255, 198, 88, 0.9); }
+  50%  { box-shadow: 0 0 10px 3px rgba(255, 198, 88, 0.55); }
+  100% { box-shadow: 0 0 3px 1px rgba(255, 198, 88, 0); }
 }
 .piece-glowing {
   animation: piece-glow 1.3s ease-out forwards;

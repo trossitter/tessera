@@ -133,7 +133,7 @@ export function Workspace({
                 top: snapPreview.y,
                 opacity: 0.5,
                 pointerEvents: "none",
-                boxShadow: "0 0 0 2px rgba(30,107,107,0.7)",
+                boxShadow: "0 0 8px 2px rgba(30,107,107,0.35)",
                 borderRadius: 6,
               }}
             >
