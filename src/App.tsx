@@ -494,31 +494,44 @@ export default function App() {
               </div>
             )}
 
-            {/* Challenge finds — most recent first */}
-            {challengeFinds.map((find, i) => (
-              <section
-                key={i}
-                className="fade-in bg-paper rounded-lg shadow-sm border border-taupe p-4 flex flex-col gap-2"
-              >
-                <header className="text-xs tracking-widest text-ink/50 uppercase border-b border-taupe pb-2">
-                  making {find.label}
-                </header>
-                <div className="flex pt-1">
-                  {find.config.map((denom, j) => (
-                    <div
-                      key={j}
-                      className={`${FIND_COLORS[denom] ?? "bg-taupe"} rounded-sm`}
-                      style={{
-                        width: 220 / denom,
-                        height: 22,
-                        boxShadow: "inset 1px 0 0 0 rgba(0,0,0,0.18), inset -1px 0 0 0 rgba(0,0,0,0.18)",
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="text-xs text-ink/70 font-medium">{find.formula}</div>
-              </section>
-            ))}
+            {/* Challenge finds — grouped by fraction, most recent group first */}
+            {(() => {
+              const groups = new Map<string, typeof challengeFinds>();
+              for (const find of challengeFinds) {
+                if (!groups.has(find.label)) groups.set(find.label, []);
+                groups.get(find.label)!.push(find);
+              }
+              return Array.from(groups.entries()).map(([label, finds]) => (
+                <section
+                  key={label}
+                  className="fade-in bg-paper rounded-lg shadow-sm border border-taupe p-4 flex flex-col gap-2"
+                >
+                  <header className="text-xs tracking-widest text-ink/50 uppercase border-b border-taupe pb-2">
+                    making {label}
+                  </header>
+                  <div className="flex flex-col gap-2 pt-1">
+                    {[...finds].reverse().map((find, i) => (
+                      <div key={i} className="flex flex-col gap-0.5">
+                        <div className="flex">
+                          {find.config.map((denom, j) => (
+                            <div
+                              key={j}
+                              className={`${FIND_COLORS[denom] ?? "bg-taupe"} rounded-sm`}
+                              style={{
+                                width: 220 / denom,
+                                height: 22,
+                                boxShadow: "inset 1px 0 0 0 rgba(0,0,0,0.18), inset -1px 0 0 0 rgba(0,0,0,0.18)",
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <div className="text-xs text-ink/70 font-medium">{find.formula}</div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ));
+            })()}
 
             <Discoveries discoveries={state.discoveries} onReplay={handleReplay} />
           </div>
