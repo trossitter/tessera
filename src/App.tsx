@@ -46,11 +46,23 @@ export default function App() {
   // --- entrance animation (20% faster than original 2.2s) ---
   const [showEntrance, setShowEntrance] = useState(true);
   const [entranceFading, setEntranceFading] = useState(false);
+  const entranceFadeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const entranceGoneRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    const fade = setTimeout(() => setEntranceFading(true), 2300);
-    const gone = setTimeout(() => setShowEntrance(false), 2900);
-    return () => { clearTimeout(fade); clearTimeout(gone); };
+    entranceFadeRef.current = setTimeout(() => setEntranceFading(true), 2300);
+    entranceGoneRef.current = setTimeout(() => setShowEntrance(false), 2900);
+    return () => {
+      if (entranceFadeRef.current) clearTimeout(entranceFadeRef.current);
+      if (entranceGoneRef.current) clearTimeout(entranceGoneRef.current);
+    };
   }, []);
+
+  const skipEntrance = () => {
+    if (entranceFadeRef.current) clearTimeout(entranceFadeRef.current);
+    if (entranceGoneRef.current) clearTimeout(entranceGoneRef.current);
+    setEntranceFading(true);
+    entranceGoneRef.current = setTimeout(() => setShowEntrance(false), 600);
+  };
 
   // --- phase & pill state ---
   const [phase, setPhase] = useState<Phase>("sandbox");
@@ -303,11 +315,12 @@ export default function App() {
   return (
     <div className="h-full flex flex-col bg-parchment">
 
-      {/* Entrance — 4 quadrants close into one centered image */}
+      {/* Entrance — 4 quadrants close into one centered image; tap to skip */}
       {showEntrance && (
         <div
-          className="fixed inset-0 z-50 bg-parchment flex items-center justify-center"
+          className="fixed inset-0 z-50 bg-parchment flex items-center justify-center cursor-pointer"
           style={{ transition: "opacity 600ms ease-out", opacity: entranceFading ? 0 : 1 }}
+          onPointerDown={skipEntrance}
         >
           <div style={{ display: "grid", gridTemplateColumns: `${TILE_PX}px ${TILE_PX}px`, gap: 0 }}>
             {[
