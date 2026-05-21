@@ -384,14 +384,21 @@ export default function App() {
       <header className="flex items-center gap-3 px-5 py-3 border-b border-taupe/50">
         <img
           src="/assets/tessera3.png"
-          alt=""
-          aria-hidden
-          className="w-10 h-10 rounded-md object-cover"
+          alt="reload"
+          role="button"
+          tabIndex={0}
+          className="w-10 h-10 rounded-md object-cover cursor-pointer active:scale-95 transition-transform"
           style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}
+          onClick={() => window.location.reload()}
+          onKeyDown={(e) => e.key === "Enter" && window.location.reload()}
         />
         <span
-          className="text-xl font-semibold tracking-wide"
+          role="button"
+          tabIndex={0}
+          className="text-xl font-semibold tracking-wide cursor-pointer"
           style={{ color: "#1a2e2a" }}
+          onClick={() => dispatch({ type: "clear" })}
+          onKeyDown={(e) => e.key === "Enter" && dispatch({ type: "clear" })}
         >
           tessera
         </span>

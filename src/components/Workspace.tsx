@@ -43,7 +43,7 @@ export function Workspace({
         <button
           type="button"
           onClick={onClear}
-          className="text-xs px-2 py-1 rounded text-ink/70 hover:text-ink hover:bg-parchment transition-colors"
+          className="text-sm px-4 py-2.5 rounded-md text-ink/70 hover:text-ink hover:bg-parchment transition-colors active:scale-95"
           aria-label="clear workspace"
         >
           clear
@@ -53,7 +53,7 @@ export function Workspace({
           type="button"
           onClick={onUndo}
           disabled={!canUndo}
-          className="text-xs px-2 py-1 rounded text-ink/70 hover:text-ink hover:bg-parchment disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+          className="text-xs px-2 py-1.5 rounded text-ink/70 hover:text-ink hover:bg-parchment disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           aria-label="undo"
         >
           ← undo
@@ -62,7 +62,7 @@ export function Workspace({
           type="button"
           onClick={onRedo}
           disabled={!canRedo}
-          className="text-xs px-2 py-1 rounded text-ink/70 hover:text-ink hover:bg-parchment disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+          className="text-xs px-2 py-1.5 rounded text-ink/70 hover:text-ink hover:bg-parchment disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           aria-label="redo"
         >
           redo →
@@ -71,7 +71,7 @@ export function Workspace({
         <button
           type="button"
           onClick={onToggleLabels}
-          className={`text-xs px-2 py-1 rounded transition-colors ${showLabels ? "bg-ink/10 text-ink" : "text-ink/40 hover:text-ink hover:bg-parchment"}`}
+          className={`text-xl px-4 py-2 rounded-md transition-colors active:scale-95 ${showLabels ? "bg-ink/10 text-ink" : "text-ink/40 hover:text-ink hover:bg-parchment"}`}
           aria-label="toggle fraction labels"
         >
           ½
