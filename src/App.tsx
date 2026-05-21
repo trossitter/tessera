@@ -83,8 +83,10 @@ export default function App() {
   const [snapPreview, setSnapPreview] = useState<{ x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
 
-  // --- labels toggle ---
+  // --- labels toggle + hold-to-peek ---
   const [showLabels, setShowLabels] = useState(false);
+  const [holdLabels, setHoldLabels] = useState(false);
+  const effectiveShowLabels = showLabels || holdLabels;
 
   // --- lesson engine ---
   const [lessonPhase, setLessonPhase] = useState(0);
@@ -432,11 +434,13 @@ export default function App() {
           <div className="relative flex-1 min-h-0 flex flex-col">
             <Workspace
               pieces={state.pieces}
-              glowingIds={glowingIds}
+              glowingIds={holdingConfig ? new Set() : glowingIds}
+              pulsingIds={holdingConfig ? glowingIds : new Set()}
               canUndo={state.past.length > 0}
               canRedo={state.future.length > 0}
               encouragement={encouragement}
-              showLabels={showLabels}
+              showLabels={effectiveShowLabels}
+              holdActive={holdLabels}
               snapPreview={snapPreview && supplyDenomRef.current
                 ? { ...snapPreview, denominator: supplyDenomRef.current }
                 : null}
@@ -447,6 +451,8 @@ export default function App() {
               onRedo={() => dispatch({ type: "redo" })}
               onClear={() => dispatch({ type: "clear" })}
               onToggleLabels={() => setShowLabels(v => !v)}
+              onHoldStart={() => setHoldLabels(true)}
+              onHoldEnd={() => setHoldLabels(false)}
             />
 
             {/* Challenge prompt — competes with the sandbox */}
@@ -541,7 +547,7 @@ export default function App() {
           </div>
 
           <Supply
-            showLabels={showLabels}
+            showLabels={effectiveShowLabels}
             excludeWhole={phase === "challenge" && !!currentChallenge && currentChallenge.target.num < currentChallenge.target.denom}
             onSpawn={handleSpawn}
             onDragStart={handleDragStart}
@@ -572,7 +578,7 @@ export default function App() {
               </div>
             )}
 
-            {/* Challenge finds — grouped by fraction, most recent group first */}
+            {/* Challenge finds — grouped by fraction, tappable to replay */}
             {(() => {
               const groups = new Map<string, typeof challengeFinds>();
               for (const find of challengeFinds) {
@@ -589,7 +595,13 @@ export default function App() {
                   </header>
                   <div className="flex flex-col gap-2 pt-1">
                     {[...finds].reverse().map((find, i) => (
-                      <div key={i} className="flex flex-col gap-0.5">
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => dispatch({ type: "replay_config", config: find.config as import("./workspace-state").Denominator[] })}
+                        className="flex flex-col gap-0.5 text-left w-full rounded-md px-2 py-1.5 -mx-2 hover:bg-parchment active:bg-parchment transition-colors"
+                        aria-label="tap to show this in the workspace"
+                      >
                         <div className="flex">
                           {find.config.map((denom, j) => (
                             <div
@@ -604,14 +616,14 @@ export default function App() {
                           ))}
                         </div>
                         <div className="text-xs text-ink/70 font-medium">{find.formula}</div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </section>
               ));
             })()}
 
-            <Discoveries discoveries={state.discoveries} showLabels={showLabels} onReplay={handleReplay} />
+            <Discoveries discoveries={state.discoveries} showLabels={effectiveShowLabels} onReplay={handleReplay} />
           </div>
         </div>
       </main>
@@ -627,7 +639,7 @@ export default function App() {
             filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.28))",
           }}
         >
-          <FractionBlock denominator={supplyDenomRef.current} showLabel={showLabels} />
+          <FractionBlock denominator={supplyDenomRef.current} showLabel={effectiveShowLabels} />
         </div>
       )}
     </div>

@@ -51,6 +51,7 @@ export type WorkspaceAction =
   | { type: "remove"; id: string }
   | { type: "clear" }
   | { type: "replay"; discovery: Discovery }
+  | { type: "replay_config"; config: Denominator[] }
   | { type: "undo" }
   | { type: "redo" };
 
@@ -318,6 +319,24 @@ export function workspaceReducer(
       x = 0;
       for (const denom of discovery.configB) {
         newPieces.push({ id: `piece-${nextId++}`, denominator: denom as Denominator, x, y: 192 });
+        x += pieceWidth(denom);
+      }
+      return {
+        pieces: newPieces,
+        nextId,
+        discoveries: state.discoveries,
+        seenConfigs: state.seenConfigs,
+        past: [...state.past, takeSnapshot(state)],
+        future: [],
+        touchCount: state.touchCount,
+      };
+    }
+    case "replay_config": {
+      let nextId = state.nextId;
+      const newPieces: Piece[] = [];
+      let x = 0;
+      for (const denom of action.config) {
+        newPieces.push({ id: `piece-${nextId++}`, denominator: denom as Denominator, x, y: 64 });
         x += pieceWidth(denom);
       }
       return {

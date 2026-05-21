@@ -7,10 +7,12 @@ import { WHOLE_WIDTH } from "../workspace-state";
 type Props = {
   pieces: PieceType[];
   glowingIds: Set<string>;
+  pulsingIds: Set<string>;
   canUndo: boolean;
   canRedo: boolean;
   encouragement: string | null;
   showLabels: boolean;
+  holdActive: boolean;
   snapPreview: { x: number; y: number; denominator: Denominator } | null;
   canvasRef: RefObject<HTMLDivElement | null>;
   onMove: (id: string, x: number, y: number) => void;
@@ -19,15 +21,19 @@ type Props = {
   onRedo: () => void;
   onClear: () => void;
   onToggleLabels: () => void;
+  onHoldStart: () => void;
+  onHoldEnd: () => void;
 };
 
 export function Workspace({
   pieces,
   glowingIds,
+  pulsingIds,
   canUndo,
   canRedo,
   encouragement,
   showLabels,
+  holdActive,
   snapPreview,
   canvasRef,
   onMove,
@@ -36,6 +42,8 @@ export function Workspace({
   onRedo,
   onClear,
   onToggleLabels,
+  onHoldStart,
+  onHoldEnd,
 }: Props) {
   return (
     <section className="bg-paper rounded-lg shadow-sm border border-taupe overflow-hidden min-h-[400px] flex-1 flex flex-col">
@@ -71,7 +79,13 @@ export function Workspace({
         <button
           type="button"
           onClick={onToggleLabels}
-          className={`text-xl px-4 py-2 rounded-md transition-colors active:scale-95 ${showLabels ? "bg-ink/10 text-ink" : "text-ink/40 hover:text-ink hover:bg-parchment"}`}
+          className={`text-xl px-4 py-2 rounded-md border transition-colors active:scale-95 ${
+            holdActive
+              ? "label-button-active border-gold/40 text-ink"
+              : showLabels
+              ? "bg-ink/10 text-ink border-ink/20"
+              : "text-ink/40 hover:text-ink hover:bg-parchment border-taupe"
+          }`}
           aria-label="toggle fraction labels"
         >
           ½
@@ -118,9 +132,12 @@ export function Workspace({
               key={piece.id}
               piece={piece}
               glowing={glowingIds.has(piece.id)}
+              glowPulsing={pulsingIds.has(piece.id)}
               showLabel={showLabels}
               onMove={onMove}
               onRemove={onRemove}
+              onHoldStart={onHoldStart}
+              onHoldEnd={onHoldEnd}
             />
           ))}
 
