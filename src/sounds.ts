@@ -14,7 +14,7 @@ function getCtx(): AudioContext | null {
 
 // Click sound — shaped noise burst, 12ms, bandpass ~3kHz.
 // Placeholder for a real iPod WAV; crisper than a sine but still synthetic.
-export function playDrop(volume = 0.35): void {
+export function playDrop(volume = 0.28): void {
   const ctx = getCtx();
   if (!ctx) return;
   try {
