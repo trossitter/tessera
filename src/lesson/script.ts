@@ -42,7 +42,11 @@ export const LESSON_SCRIPT: Phase[] = [
   },
   {
     id: "exploration_prompt",
-    guideLines: ["What do you notice?"],
+    guideLines: [
+      "What do you notice?",
+      "Parts of a whole are called fractions.",
+      "Two different arrangements that take up the same space — that's equivalence.",
+    ],
     advance: { kind: "after_event", event: "discovered_half_equals_two_quarters" },
   },
   {

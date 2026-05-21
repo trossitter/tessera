@@ -10,6 +10,17 @@ const COLOR_BY_DENOM: Record<number, string> = {
   8: "bg-eighth",
 };
 
+const LABEL_COLOR: Record<number, string> = {
+  1: "rgba(255,255,255,0.85)",
+  2: "rgba(255,255,255,0.85)",
+  4: "rgba(26,46,42,0.65)",
+  8: "rgba(26,46,42,0.65)",
+};
+
+const LABEL: Record<number, string> = {
+  1: "1", 2: "½", 4: "¼", 8: "⅛",
+};
+
 function gcd(a: number, b: number): number {
   return b === 0 ? a : gcd(b, a % b);
 }
@@ -27,7 +38,7 @@ function configLabel(config: number[]): string {
   return config.map(d => d === 1 ? "1" : `1/${d}`).join(" + ");
 }
 
-function ConfigBar({ config }: { config: number[] }) {
+function ConfigBar({ config, showLabels }: { config: number[]; showLabels?: boolean }) {
   return (
     <div className="flex">
       {config.map((denom, i) => (
@@ -37,10 +48,27 @@ function ConfigBar({ config }: { config: number[] }) {
           style={{
             width: SCALE_UNIT_WIDTH / denom,
             height: SCALE_BLOCK_HEIGHT,
-            boxShadow:
-              "inset 1px 0 0 0 rgba(0,0,0,0.18), inset -1px 0 0 0 rgba(0,0,0,0.18)",
+            boxShadow: "inset 1px 0 0 0 rgba(0,0,0,0.18), inset -1px 0 0 0 rgba(0,0,0,0.18)",
+            position: "relative",
           }}
-        />
+        >
+          {showLabels && (
+            <span style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: Math.max(7, SCALE_BLOCK_HEIGHT * 0.45),
+              fontWeight: 700,
+              color: LABEL_COLOR[denom] ?? "rgba(255,255,255,0.85)",
+              pointerEvents: "none",
+              userSelect: "none",
+            }}>
+              {LABEL[denom] ?? `1/${denom}`}
+            </span>
+          )}
+        </div>
       ))}
     </div>
   );
@@ -48,9 +76,11 @@ function ConfigBar({ config }: { config: number[] }) {
 
 function DiscoveryRow({
   discovery,
+  showLabels,
   onReplay,
 }: {
   discovery: Discovery;
+  showLabels?: boolean;
   onReplay: (d: Discovery) => void;
 }) {
   return (
@@ -60,9 +90,9 @@ function DiscoveryRow({
       className="flex flex-col gap-1 text-left w-full rounded-md px-2 py-1.5 -mx-2 hover:bg-parchment active:bg-parchment transition-colors"
       aria-label="tap to show this in the workspace"
     >
-      <ConfigBar config={discovery.configA} />
+      <ConfigBar config={discovery.configA} showLabels={showLabels} />
       <span className="text-ink/40 text-xs leading-none pl-2">=</span>
-      <ConfigBar config={discovery.configB} />
+      <ConfigBar config={discovery.configB} showLabels={showLabels} />
       <div className="text-xs text-ink/70 font-medium pt-0.5">
         {configLabel(discovery.configA)} = {configLabel(discovery.configB)}
       </div>
@@ -72,6 +102,7 @@ function DiscoveryRow({
 
 type Props = {
   discoveries: Discovery[];
+  showLabels?: boolean;
   onReplay: (d: Discovery) => void;
 };
 
@@ -86,7 +117,7 @@ function configFloat(config: number[]): number {
   return config.reduce((sum, d) => sum + 1 / d, 0);
 }
 
-export function Discoveries({ discoveries, onReplay }: Props) {
+export function Discoveries({ discoveries, showLabels, onReplay }: Props) {
   if (discoveries.length === 0) {
     return (
       <section className="bg-paper rounded-lg shadow-sm border border-taupe p-4">
@@ -128,6 +159,7 @@ export function Discoveries({ discoveries, onReplay }: Props) {
               <DiscoveryRow
                 key={discovery.id}
                 discovery={discovery}
+                showLabels={showLabels}
                 onReplay={onReplay}
               />
             ))}

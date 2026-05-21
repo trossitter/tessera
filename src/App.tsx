@@ -570,7 +570,7 @@ export default function App() {
               ));
             })()}
 
-            <Discoveries discoveries={state.discoveries} onReplay={handleReplay} />
+            <Discoveries discoveries={state.discoveries} showLabels={showLabels} onReplay={handleReplay} />
           </div>
         </div>
       </main>
