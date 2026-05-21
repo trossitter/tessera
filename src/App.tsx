@@ -563,6 +563,7 @@ export default function App() {
               <div className="fade-in">
                 <Challenge
                   label={currentChallenge?.label ?? ""}
+                  target={currentChallenge?.target ?? { num: 1, denom: 1 }}
                   required={required}
                   foundCount={foundCount}
                   allDone={allDone}
