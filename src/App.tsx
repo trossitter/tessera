@@ -418,17 +418,12 @@ export default function App() {
           {currentLessonLine && (
             <div
               key={`${lessonPhase}-${lessonLineIndex}`}
-              className="fade-in bg-paper rounded-lg border border-taupe px-4 py-3 flex items-center justify-between gap-3"
+              className={`fade-in bg-paper rounded-lg border border-taupe px-4 py-3 flex items-center justify-between gap-3 ${(!isLastLessonLine || lessonNeedsReady) ? "cursor-pointer active:bg-parchment transition-colors" : ""}`}
+              onClick={(!isLastLessonLine || lessonNeedsReady) ? handleAdvanceLesson : undefined}
             >
               <p className="text-sm text-ink/80 leading-snug italic">{currentLessonLine}</p>
               {(!isLastLessonLine || lessonNeedsReady) && (
-                <button
-                  type="button"
-                  onClick={handleAdvanceLesson}
-                  className="shrink-0 text-xs text-ink/35 hover:text-ink/60 transition-colors"
-                >
-                  →
-                </button>
+                <span className="shrink-0 text-xs text-ink/35" aria-hidden>→</span>
               )}
             </div>
           )}
