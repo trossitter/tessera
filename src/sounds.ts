@@ -1,8 +1,23 @@
+type AC = typeof AudioContext;
+let _ctx: AudioContext | null = null;
+
+function getCtx(): AudioContext | null {
+  try {
+    const Ctor: AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: AC }).webkitAudioContext;
+    if (!_ctx || _ctx.state === "closed") _ctx = new Ctor();
+    if (_ctx.state === "suspended") _ctx.resume();
+    return _ctx;
+  } catch {
+    return null;
+  }
+}
+
 // Click sound — shaped noise burst, 12ms, bandpass ~3kHz.
 // Placeholder for a real iPod WAV; crisper than a sine but still synthetic.
 export function playDrop(volume = 0.35): void {
+  const ctx = getCtx();
+  if (!ctx) return;
   try {
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     const sampleRate = ctx.sampleRate;
     const duration = 0.012;
     const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
@@ -23,7 +38,6 @@ export function playDrop(volume = 0.35): void {
     filter.connect(gain);
     gain.connect(ctx.destination);
     source.start();
-    setTimeout(() => ctx.close(), 200);
   } catch {
     // Audio unavailable — silent fail
   }
@@ -33,8 +47,9 @@ export function playDrop(volume = 0.35): void {
 // Generated via Web Audio API; no external file needed.
 // Reused for: entrance tile snap, discovery credit moment.
 export function playSnap(volume = 0.35): void {
+  const ctx = getCtx();
+  if (!ctx) return;
   try {
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     const sampleRate = ctx.sampleRate;
     const duration = 0.07;
     const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
@@ -50,7 +65,6 @@ export function playSnap(volume = 0.35): void {
     source.connect(gain);
     gain.connect(ctx.destination);
     source.start();
-    setTimeout(() => ctx.close(), 500);
   } catch {
     // Audio unavailable — silent fail
   }
