@@ -5,6 +5,7 @@ import { pieceWidth, PIECE_HEIGHT, snap, SNAP_X, SNAP_Y } from "./workspace-stat
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
 import { Discoveries } from "./components/Discoveries";
+import { SortableFinds } from "./components/SortableFinds";
 import { Challenge } from "./components/Challenge";
 import { FractionBlock } from "./components/FractionBlock";
 import {
@@ -259,6 +260,16 @@ export default function App() {
     dispatch({ type: "replay", discovery });
   };
 
+  const handleReorderFinds = (label: string, from: number, to: number) => {
+    setChallengeFinds(prev => {
+      const reordered = [...prev.filter(f => f.label === label)];
+      const [item] = reordered.splice(from, 1);
+      reordered.splice(to, 0, item);
+      let gi = 0;
+      return prev.map(f => f.label === label ? reordered[gi++] : f);
+    });
+  };
+
   // --- challenge logic ---
 
   // Detection: when a filled row sums to the target, enter hold state.
@@ -345,10 +356,6 @@ export default function App() {
   const lessonNeedsReady = currentLesson?.advance.kind === "user_ready";
   const currentLessonLine = lessonLines[lessonLineIndex] ?? null;
   const isLastLessonLine = lessonLineIndex >= lessonLines.length - 1;
-
-  const FIND_COLORS: Record<number, string> = {
-    1: "bg-whole", 2: "bg-half", 4: "bg-quarter", 8: "bg-eighth",
-  };
 
   return (
     <div className="h-full flex flex-col bg-parchment">
@@ -580,49 +587,27 @@ export default function App() {
               </div>
             )}
 
-            {/* Challenge finds — grouped by fraction, tappable to replay */}
+            {/* Challenge finds — grouped by fraction, tappable to replay, draggable to reorder */}
             {(() => {
-              const groups = new Map<string, typeof challengeFinds>();
-              for (const find of challengeFinds) {
-                if (!groups.has(find.label)) groups.set(find.label, []);
-                groups.get(find.label)!.push(find);
-              }
-              return Array.from(groups.entries()).map(([label, finds]) => (
-                <section
-                  key={label}
-                  className="fade-in bg-paper rounded-lg shadow-sm border border-taupe p-4 flex flex-col gap-2"
-                >
-                  <header className="text-xs tracking-widest text-ink/50 uppercase border-b border-taupe pb-2">
-                    making {label}
-                  </header>
-                  <div className="flex flex-col gap-2 pt-1">
-                    {[...finds].reverse().map((find, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => dispatch({ type: "replay_config", config: find.config as import("./workspace-state").Denominator[] })}
-                        className="flex flex-col gap-0.5 text-left w-full rounded-md px-2 py-1.5 -mx-2 hover:bg-parchment active:bg-parchment transition-colors"
-                        aria-label="tap to show this in the workspace"
-                      >
-                        <div className="flex">
-                          {find.config.map((denom, j) => (
-                            <div
-                              key={j}
-                              className={`${FIND_COLORS[denom] ?? "bg-taupe"} rounded-sm`}
-                              style={{
-                                width: 220 / denom,
-                                height: 22,
-                                boxShadow: "inset 1px 0 0 0 rgba(0,0,0,0.18), inset -1px 0 0 0 rgba(0,0,0,0.18)",
-                              }}
-                            />
-                          ))}
-                        </div>
-                        <div className="text-xs text-ink/70 font-medium">{find.formula}</div>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              ));
+              const labels = [...new Set(challengeFinds.map(f => f.label))];
+              return labels.map(label => {
+                const group = challengeFinds.filter(f => f.label === label);
+                return (
+                  <section
+                    key={label}
+                    className="fade-in bg-paper rounded-lg shadow-sm border border-taupe p-4 flex flex-col gap-2"
+                  >
+                    <header className="text-xs tracking-widest text-ink/50 uppercase border-b border-taupe pb-2">
+                      making {label}
+                    </header>
+                    <SortableFinds
+                      finds={group}
+                      onReorder={(from, to) => handleReorderFinds(label, from, to)}
+                      onReplay={(config) => dispatch({ type: "replay_config", config: config as Denominator[] })}
+                    />
+                  </section>
+                );
+              });
             })()}
 
             <Discoveries discoveries={state.discoveries} showLabels={effectiveShowLabels} onReplay={handleReplay} />
