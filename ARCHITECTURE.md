@@ -22,9 +22,7 @@ The lesson has a direction: from complexity to simplicity. The child begins in o
 
 This is how mathematics actually works. Infinite line segments, individually meaningless, can be held all at once as a single plane. A proof that requires twenty lemmas is eventually apprehended as one idea. Equivalence — 1/2 = 2/4 = 4/8 — is many arrangements resolved into one relationship.
 
-The UI must carry this structure. The transition from manipulation to mastery should feel like zooming out until many things become one thing — not like opening a drawer.
-
-**Implementation intent:** at lesson completion, the workspace does not gain a panel. It transitions — full screen — to the resolved form: the equivalence chain, large, centered, still. The manipulative has done its work and recedes. This is not a modal or a side panel; it is the lesson arriving at its destination.
+The UI must carry this structure. The transition from manipulation to mastery should feel like zooming out until many things become one thing — not fulfilling an assigned math task
 
 The right-panel slide-in used during early development is a placeholder mechanism with no pedagogical meaning and should be replaced before the experience is considered complete.
 
@@ -32,8 +30,8 @@ The right-panel slide-in used during early development is a placeholder mechanis
 
 | Layer | Tech | Role |
 |---|---|---|
-| **Interactive manipulative** | React 19 + TypeScript + Tailwind v4 + SVG + pointer events | The child's hands-on work: drag, snap, combine, split fraction pieces. |
-| **Expository animation** | Manim Community (Python) → pre-rendered WebM, committed | Short (5–15s) precise mathematical clips at moments of revelation. Embedded as `<video>` elements. |
+| **Interactive manipulative** | React 19 + TypeScript + Tailwind v4 + SVG + pointer events | The child's hands-on work: the pieces can be touched and toggled or dragged. All tiles can grid-snap or combine, . |
+## removed from project 5/21| **Expository animation** | Manim Community (Python) → pre-rendered WebM, committed | Short (5–15s) precise mathematical clips at moments of revelation. Embedded as `<video>` elements. |
 
 The interactive layer is the lesson; the expository layer reinforces in a different visual register, never re-teaches.
 
@@ -44,7 +42,7 @@ The interactive layer is the lesson; the expository layer reinforces in a differ
 - **Pointer events** over mouse-only DnD libraries — uniform touch+mouse handling; cleaner than `react-dnd` for this scope.
 - **SVG + divs** (not canvas) — composes naturally with React, keyboard-accessibility-friendly later, easier to style with Tailwind. Canvas reserved for if/when we need physics-feel smash animations.
 - **Manim Community** — produces precise mathematical animations in the 3Blue1Brown lineage; pre-rendered videos avoid runtime Python dependency in the browser.
-- **No LLM, no backend, no auth, no persistence** — spec explicitly does not require these; sprint emphasizes *interaction quality* over technical breadth.
+- **No LLM, no backend, no auth, no persistence** — spec explicitly does not require these; emphasizing *interaction quality* over technical breadth.
 
 ## State model
 
@@ -73,34 +71,13 @@ Wrong combinations are not flagged with text. The geometry refuses incorrect equ
 
 ## Manim integration
 
-```
-tessera/
-  manim/
-    .venv/                       ← Python virtualenv (gitignored)
-    scenes/
-      half_equals_two_quarters.py
-      ...
-  public/animations/
-    half_equals_two_quarters.webm  ← rendered, committed to repo
-```
-
-Render: `cd manim && source .venv/bin/activate && manim -ql scenes/<file>.py <SceneName>`.
-Output is moved into `public/animations/` and referenced by the React app via `<video src="/animations/...webm" />`.
-
-Planned scenes (3–5 clips total):
-1. **`half_equals_two_quarters`** — 1/2 dissolves into 2/4 by area preservation.
-2. **`half_equals_four_eighths`** — extending the same idea once more.
-3. **`one_third_not_two_quarters`** — negative example: the pieces don't fit.
-4. _(optional)_ **`generating_equivalents`** — doubling: split each piece in half, get an equivalent fraction.
-5. _(optional)_ **`family_of_half`** — the chain 1/2 = 2/4 = 4/8 laid out together.
 
 ## Open decisions
 
-- **Palette and type** — direction: muted, Hilda-inspired, no candy colors. Type: quiet serif for prose, sans-serif for UI. Specifics TBD.
 - **Lesson script authorship** — who drafts the tutor's lines.
-- **Sound design** — silent / subtle snap / voiced. Default position: silent, with optional subtle snap on piece-fit.
-- **Check-for-understanding format** — manipulation-based ("show me three ways to make 3/4"), not multiple choice. Number and difficulty TBD.
-- **Wordmark/header presentation** — quiet lowercase "tessera" vs. no wordmark.
+- **Sound design** — silent / subtle snap / voiced. Consideration for background music and triumph pieces when success is achieved
+- **Check-for-understanding format** — Number and difficulty TBD. week long prototype explores only dyadic fractions.
+
 
 ## Influences
 
@@ -108,7 +85,8 @@ Planned scenes (3–5 clips total):
 - **bell hooks** (*Teaching to Transgress*) — refuse the banking model; tutor asks rather than declares.
 - **Grant Sanderson** (3Blue1Brown / Manim) — teach above their level; visual intuition before formalism.
 - ***Hilda*** (cartoon) — quiet aesthetic; muted palette; refuse the dopamine loop.
+ - **Palette and type** — direction: muted, Hilda-inspired, no candy colors. Type: quiet serif for prose, sans-serif for UI. 
 
 ## Out of scope
 
-Per spec: no LLM-based conversational agent, no multi-lesson curriculum, no learner accounts, no progress persistence, no adaptive AI, no analytics. Per design discipline: no badges, streaks, gamification, "Great job!" voice, candy palette.
+Per spec: no LLM-based conversational agent, no multi-lesson curriculum, no learner accounts, no progress persistence, no adaptive AI, no analytics. Per design discipline: no badges, streaks, over-gamification, "Great job!" voice, candy palette.
