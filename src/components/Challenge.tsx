@@ -1,48 +1,42 @@
-const SCALE_W = 220;
-const SCALE_H = 28;
 
 type Props = {
-  target: { num: number; denom: number };
+  label: string;
   required: number;
   foundCount: number;
   allDone: boolean;
 };
 
-export function Challenge({ target, required, foundCount, allDone }: Props) {
-  const targetWidth = SCALE_W * (target.num / target.denom);
+export function Challenge({
+  label,
+  required,
+  foundCount,
+  allDone,
+}: Props) {
 
   return (
-    <section className="bg-paper rounded-lg shadow-sm border border-taupe p-5 flex flex-col gap-4">
+    <section className="bg-paper rounded-lg shadow-sm border border-taupe p-4 flex flex-col gap-3">
       <header className="text-xs tracking-widest text-ink/50 uppercase border-b border-taupe pb-2">
         challenge
       </header>
 
       {allDone ? (
-        <div className="text-sm text-ink/60 italic pt-1">
+        <div className="text-base text-ink/60 italic pt-1">
           look at what you made.
         </div>
       ) : (
         <>
-          {/* Visual target — the shape the child is trying to fill */}
-          <div style={{ width: SCALE_W, height: SCALE_H, position: "relative", borderRadius: 5, border: "1.5px solid rgba(26,46,42,0.18)" }}>
-            <div style={{
-              width: targetWidth,
-              height: "100%",
-              background: "rgba(26,46,42,0.10)",
-              borderRadius: 3,
-            }} />
+          <div className="text-base text-ink pt-1">
+            find {required === 1 ? "a way" : `${required} ways`} to make{" "}
+            <span className="font-semibold">{label}</span>.
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-ink/50 italic tracking-wide">
-              {required === 1 ? "show me this." : `show me this ${required} ways.`}
-            </span>
-            {required > 1 && (
-              <span className="text-xs text-ink/50">
-                {foundCount} of {required}
+          {required > 1 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-ink/60">
+                {foundCount} of {required} found
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </>
       )}
     </section>
