@@ -39,7 +39,7 @@ export function Challenge({
 
       {allDone ? (
         <div className="text-base text-ink/60 italic pt-1">
-          all challenges complete.
+          look at what you made.
         </div>
       ) : (
         <>
@@ -59,14 +59,14 @@ export function Challenge({
           {complete && (
             <div className="flex flex-col gap-3 pt-1">
               <div className="text-sm font-medium text-ink">
-                you found them all!
+                look at what you made.
               </div>
               <button
                 type="button"
                 onClick={onNext}
                 className="self-start text-sm px-5 py-2.5 rounded-md bg-ink text-paper hover:bg-ink/80 active:scale-95 transition-all font-medium"
               >
-                next challenge →
+                keep going →
               </button>
             </div>
           )}
