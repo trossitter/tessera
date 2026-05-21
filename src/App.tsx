@@ -554,6 +554,8 @@ export default function App() {
             onDragMove={handleDragMove}
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
+            onHoldStart={() => { playDrop(); setHoldLabels(true); }}
+            onHoldEnd={() => setHoldLabels(false)}
           />
         </div>
 

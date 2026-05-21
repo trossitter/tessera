@@ -5,7 +5,7 @@ import type { Piece as PieceType } from "../workspace-state";
 
 const TAP_MAX_MOVE_PX = 10;
 const TAP_MAX_MS = 250;
-const HOLD_LABELS_MS = 3000;
+const HOLD_LABELS_MS = 2000;
 
 type Props = {
   piece: PieceType;
