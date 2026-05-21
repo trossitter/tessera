@@ -333,10 +333,13 @@ export function workspaceReducer(
     }
     case "replay_config": {
       let nextId = state.nextId;
-      const newPieces: Piece[] = [];
+      const occupiedYs = new Set(state.pieces.map(p => p.y));
+      let targetY = SNAP_Y;
+      while (occupiedYs.has(targetY) && targetY <= SNAP_Y * 8) targetY += SNAP_Y;
+      const newPieces = [...state.pieces];
       let x = 0;
       for (const denom of action.config) {
-        newPieces.push({ id: `piece-${nextId++}`, denominator: denom as Denominator, x, y: 64 });
+        newPieces.push({ id: `piece-${nextId++}`, denominator: denom as Denominator, x, y: targetY });
         x += pieceWidth(denom);
       }
       return {
