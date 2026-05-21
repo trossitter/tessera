@@ -1,24 +1,29 @@
-// Plop sound — deep sine with steep pitch fall, ~80ms.
-// Timbre: low tactile thud (iPod click wheel register); used for label toggle.
-export function playDrop(volume = 0.15): void {
+// Click sound — shaped noise burst, 12ms, bandpass ~3kHz.
+// Placeholder for a real iPod WAV; crisper than a sine but still synthetic.
+export function playDrop(volume = 0.35): void {
   try {
     const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
+    const sampleRate = ctx.sampleRate;
+    const duration = 0.012;
+    const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const t = i / sampleRate;
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-t / 0.003);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 2800;
+    filter.Q.value = 0.9;
     const gain = ctx.createGain();
-
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(400, now);
-    osc.frequency.exponentialRampToValueAtTime(100, now + 0.07);
-
-    gain.gain.setValueAtTime(volume, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-
-    osc.connect(gain);
+    gain.gain.value = volume;
+    source.connect(filter);
+    filter.connect(gain);
     gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.1);
-    setTimeout(() => ctx.close(), 300);
+    source.start();
+    setTimeout(() => ctx.close(), 200);
   } catch {
     // Audio unavailable — silent fail
   }
