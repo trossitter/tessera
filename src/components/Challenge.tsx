@@ -2,14 +2,13 @@ const SCALE_W = 220;
 const SCALE_H = 28;
 
 type Props = {
-  label: string;
   target: { num: number; denom: number };
   required: number;
   foundCount: number;
   allDone: boolean;
 };
 
-export function Challenge({ label, target, required, foundCount, allDone }: Props) {
+export function Challenge({ target, required, foundCount, allDone }: Props) {
   const targetWidth = SCALE_W * (target.num / target.denom);
 
   return (

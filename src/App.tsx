@@ -562,7 +562,6 @@ export default function App() {
             {phase === "challenge" && (
               <div className="fade-in">
                 <Challenge
-                  label={currentChallenge?.label ?? ""}
                   target={currentChallenge?.target ?? { num: 1, denom: 1 }}
                   required={required}
                   foundCount={foundCount}
