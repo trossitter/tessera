@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useState, useCallback } from "react";
 import { LESSON_SCRIPT } from "./lesson/script";
-import { playSnap } from "./sounds";
+import { playSnap, playDrop } from "./sounds";
 import { pieceWidth, PIECE_HEIGHT, snap, SNAP_X, SNAP_Y } from "./workspace-state";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
@@ -450,8 +450,8 @@ export default function App() {
               onUndo={() => dispatch({ type: "undo" })}
               onRedo={() => dispatch({ type: "redo" })}
               onClear={() => dispatch({ type: "clear" })}
-              onToggleLabels={() => setShowLabels(v => !v)}
-              onHoldStart={() => setHoldLabels(true)}
+              onToggleLabels={() => { playDrop(); setShowLabels(v => !v); }}
+              onHoldStart={() => { playDrop(); setHoldLabels(true); }}
               onHoldEnd={() => setHoldLabels(false)}
             />
 
