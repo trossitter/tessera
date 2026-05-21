@@ -73,8 +73,9 @@ export default function App() {
   // --- challenge state ---
   const [challengeIndex, setChallengeIndex] = useState(0);
   const [challengeCredits, setChallengeCredits] = useState<string[]>([]);
-  const [holdingConfig, setHoldingConfig] = useState<number[] | null>(null); // row awaiting acknowledgment
+  const [holdingConfig, setHoldingConfig] = useState<number[] | null>(null);
   const [challengeFinds, setChallengeFinds] = useState<{ label: string; config: number[]; formula: string }[]>([]);
+  const [showCompletion, setShowCompletion] = useState(false);
 
   // --- supply drag ---
   const supplyDenomRef = useRef<Denominator | null>(null);
@@ -87,6 +88,7 @@ export default function App() {
 
   // --- lesson engine ---
   const [lessonPhase, setLessonPhase] = useState(0);
+  const [lessonLineIndex, setLessonLineIndex] = useState(0);
 
   // --- visual fx ---
   const [glowingIds, setGlowingIds] = useState<Set<string>>(new Set());
@@ -140,7 +142,16 @@ export default function App() {
   // task_complete: practice → complete
   // (fired in handleNext when challenges are finished)
 
-  const handleAdvanceLesson = () => setLessonPhase(p => p + 1);
+  // Reset line index when lesson phase changes
+  useEffect(() => { setLessonLineIndex(0); }, [lessonPhase]);
+
+  const handleAdvanceLesson = () => {
+    if (lessonLineIndex < lessonLines.length - 1) {
+      setLessonLineIndex(i => i + 1);
+    } else {
+      setLessonPhase(p => p + 1);
+    }
+  };
 
   // --- opt-in handlers ---
 
@@ -277,6 +288,8 @@ export default function App() {
     if (!current) return;
     const key = configKey(holdingConfig);
     playSnap(0.25);
+    const newCount = challengeCredits.length + 1;
+    const willComplete = newCount >= current.required;
     setChallengeCredits(prev => [...prev, key]);
     setChallengeFinds(prev => [{
       label: current.label,
@@ -287,17 +300,19 @@ export default function App() {
     if (glowTimer.current) clearTimeout(glowTimer.current);
     glowTimer.current = setTimeout(() => {
       setGlowingIds(new Set());
-      dispatch({ type: "clear" }); // pieces glow, then workspace sweeps clean
+      dispatch({ type: "clear" });
+      if (willComplete) setShowCompletion(true);
     }, GLOW_DURATION_MS);
   };
 
   const handleNext = () => {
     const nextIdx = challengeIndex + 1;
+    setShowCompletion(false);
     dispatch({ type: "clear" });
     setHoldingConfig(null);
     setChallengeCredits([]);
     setChallengeIndex(nextIdx);
-    if (nextIdx >= CHALLENGES.length) setLessonPhase(p => Math.max(p, 6)); // task_complete
+    if (nextIdx >= CHALLENGES.length) setLessonPhase(p => Math.max(p, 6));
   };
 
   // --- keyboard undo/redo ---
@@ -321,12 +336,13 @@ export default function App() {
   const allDone = challengeIndex >= CHALLENGES.length;
   const required = currentChallenge?.required ?? 0;
   const foundCount = challengeCredits.length;
-  const challengeComplete = !allDone && foundCount >= required;
   const panelVisible = phase === "challenge" || state.discoveries.length > 0 || challengeFinds.length > 0;
 
   const currentLesson = LESSON_SCRIPT[lessonPhase];
   const lessonLines = currentLesson?.guideLines ?? [];
   const lessonNeedsReady = currentLesson?.advance.kind === "user_ready";
+  const currentLessonLine = lessonLines[lessonLineIndex] ?? null;
+  const isLastLessonLine = lessonLineIndex >= lessonLines.length - 1;
 
   const FIND_COLORS: Record<number, string> = {
     1: "bg-whole", 2: "bg-half", 4: "bg-quarter", 8: "bg-eighth",
@@ -389,21 +405,22 @@ export default function App() {
       </header>
 
       <main className="flex-1 flex gap-4 p-4 min-h-0">
-        <div className="flex flex-col gap-4 min-h-0 flex-1 min-w-0">
+        <div className="flex flex-col gap-5 min-h-0 flex-1 min-w-0">
 
-          {/* Lesson guide voice */}
-          {lessonLines.length > 0 && (
-            <div className="fade-in bg-paper rounded-lg border border-taupe px-4 py-3 flex flex-col gap-1.5">
-              {lessonLines.map((line, i) => (
-                <p key={i} className="text-sm text-ink/80 leading-snug italic">{line}</p>
-              ))}
-              {lessonNeedsReady && (
+          {/* Lesson guide voice — one line at a time */}
+          {currentLessonLine && (
+            <div
+              key={`${lessonPhase}-${lessonLineIndex}`}
+              className="fade-in bg-paper rounded-lg border border-taupe px-4 py-3 flex items-center justify-between gap-3"
+            >
+              <p className="text-sm text-ink/80 leading-snug italic">{currentLessonLine}</p>
+              {(!isLastLessonLine || lessonNeedsReady) && (
                 <button
                   type="button"
                   onClick={handleAdvanceLesson}
-                  className="self-start text-xs text-ink/40 hover:text-ink/70 transition-colors pt-1"
+                  className="shrink-0 text-xs text-ink/35 hover:text-ink/60 transition-colors"
                 >
-                  continue →
+                  →
                 </button>
               )}
             </div>
@@ -468,6 +485,30 @@ export default function App() {
               </div>
             )}
 
+            {/* Completion overlay — competes with sandbox, clears the field */}
+            {showCompletion && phase === "challenge" && (
+              <div
+                className="absolute inset-0 flex items-center justify-center rounded-lg z-10 fade-in"
+                style={{ background: "rgba(247,243,232,0.92)", backdropFilter: "blur(8px)" }}
+              >
+                <div className="flex flex-col gap-6 items-center text-center mx-8">
+                  <p className="text-3xl font-bold text-ink tracking-widest uppercase leading-tight">
+                    look at what you made.
+                  </p>
+                  {!allDone && (
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      className="text-sm px-6 py-3 rounded-lg font-bold tracking-widest uppercase transition-all active:scale-95"
+                      style={{ background: "#1e6b6b", color: "#f7f3e8", fontFamily: "inherit" }}
+                    >
+                      keep going →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Hold state — child must tap their fraction to send it to the panel */}
             {holdingConfig && phase === "challenge" && (
               <div
@@ -524,9 +565,7 @@ export default function App() {
                   label={currentChallenge?.label ?? ""}
                   required={required}
                   foundCount={foundCount}
-                  complete={challengeComplete}
                   allDone={allDone}
-                  onNext={handleNext}
                 />
               </div>
             )}
