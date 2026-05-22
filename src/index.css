@@ -11,7 +11,7 @@
   /* fraction pieces — four distinct hue families from tessera3 palette */
   --color-whole: #c07840;    /* terracotta / rust */
   --color-half: #216858;     /* deep forest teal */
-  --color-quarter: #e8d5c4;  /* warm cream / blush — distinct from parchment, soft contrast */
+  --color-quarter: #e6c8a2;  /* warm peach — saturated enough to read against parchment */
   --color-eighth: #a0d4ce;   /* sky teal — lifted to L≈73%, clear gap above terracotta */
 }
 
