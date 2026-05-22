@@ -1,5 +1,7 @@
 # Tessera
 
+*From Latin: a small tile, one piece of a mosaic.*
+
 A fraction equivalence manipulative for children ages 9–11. Students arrange colored tiles — whole, half, quarter, eighth — and discover that different arrangements can occupy the same space. The equivalence comes first. The notation comes later.
 
 Runs in the browser. Designed for iPad touch. No backend, no accounts, no data leaves the device.
@@ -11,6 +13,10 @@ Runs in the browser. Designed for iPad touch. No backend, no accounts, no data l
 ## The idea
 
 Most fraction curricula introduce the symbol before the concept. Tessera inverts this: a child builds 2/4 next to 1/2, sees them span the same width, and the equation surfaces from the observation — not the other way around. The challenge sequence that follows gives that intuition somewhere to go.
+
+This is not a lesson in the traditional sense. There is no tutorial, no strong praise, no star rating. There is play, and there is acknowledgment. The app acknowledges what you built. You have to do the playing.
+
+There are a few easter eggs. Explore.
 
 ## Running locally
 
