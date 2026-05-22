@@ -12,7 +12,7 @@
   --color-whole: #c07840;    /* terracotta / rust */
   --color-half: #216858;     /* deep forest teal */
   --color-quarter: #e8d5c4;  /* warm cream / blush — distinct from parchment, soft contrast */
-  --color-eighth: #78c4ba;   /* sky teal — light, cool */
+  --color-eighth: #a0d4ce;   /* sky teal — lifted to L≈73%, clear gap above terracotta */
 }
 
 @keyframes fade-in {
