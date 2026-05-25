@@ -10,7 +10,7 @@ type Coverage = { primary: CoverRegion; secondary: CoverRegion | null };
 const UNICODE_FRACS: Record<string, string> = {
   "1/2": "½", "1/3": "⅓", "1/4": "¼", "1/6": "⅙", "1/8": "⅛",
   "2/3": "⅔", "3/4": "¾", "5/6": "⅚",
-  "3/8": "3⁄8", "5/8": "5⁄8", "7/8": "7⁄8",
+  "3/8": "³⁄₈", "5/8": "⁵⁄₈", "7/8": "⁷⁄₈",
 };
 
 function gcd(a: number, b: number): number {
