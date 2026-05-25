@@ -6,9 +6,20 @@ const FIND_COLORS: Record<number, string> = {
   1: "bg-whole", 2: "bg-half", 4: "bg-quarter", 8: "bg-eighth",
 };
 
+const LABEL_COLOR: Record<number, string> = {
+  1: "rgba(255,255,255,0.85)",
+  2: "rgba(255,255,255,0.85)",
+  4: "rgba(26,46,42,0.65)",
+  8: "rgba(26,46,42,0.65)",
+};
+
+const LABEL: Record<number, string> = {
+  1: "1", 2: "½", 4: "¼", 8: "⅛",
+};
+
 const DRAG_THRESHOLD = 8;
 
-function FindRow({ find }: { find: Find }) {
+function FindRow({ find, showLabels }: { find: Find; showLabels?: boolean }) {
   return (
     <>
       <div className="flex">
@@ -20,8 +31,26 @@ function FindRow({ find }: { find: Find }) {
               width: 220 / denom,
               height: 22,
               boxShadow: "inset 1px 0 0 0 rgba(0,0,0,0.18), inset -1px 0 0 0 rgba(0,0,0,0.18)",
+              position: "relative",
             }}
-          />
+          >
+            {showLabels && (
+              <span style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: Math.max(7, 22 * 0.45),
+                fontWeight: 700,
+                color: LABEL_COLOR[denom] ?? "rgba(255,255,255,0.85)",
+                pointerEvents: "none",
+                userSelect: "none",
+              }}>
+                {LABEL[denom] ?? `1/${denom}`}
+              </span>
+            )}
+          </div>
         ))}
       </div>
       <div className="text-xs text-ink/70 font-medium">{find.formula}</div>
@@ -40,10 +69,12 @@ type DragState = {
 
 export function SortableFinds({
   finds,
+  showLabels,
   onReorder,
   onReplay,
 }: {
   finds: Find[];
+  showLabels?: boolean;
   onReorder: (from: number, to: number) => void;
   onReplay: (config: number[]) => void;
 }) {
@@ -142,7 +173,7 @@ export function SortableFinds({
                 cursor: drag ? "grabbing" : "grab",
               }}
             >
-              <FindRow find={finds[originalIdx]} />
+              <FindRow find={finds[originalIdx]} showLabels={showLabels} />
             </div>
           );
         })}
@@ -158,7 +189,7 @@ export function SortableFinds({
             opacity: 0.93,
           }}
         >
-          <FindRow find={finds[drag.fromIndex]} />
+          <FindRow find={finds[drag.fromIndex]} showLabels={showLabels} />
         </div>
       )}
     </>

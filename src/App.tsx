@@ -681,6 +681,7 @@ export default function App() {
                     </header>
                     <SortableFinds
                       finds={group}
+                      showLabels={effectiveShowLabels}
                       onReorder={(from, to) => handleReorderFinds(label, from, to)}
                       onReplay={(config) => { playTick(); dispatch({ type: "replay_config", config: config as Denominator[] }); }}
                     />
