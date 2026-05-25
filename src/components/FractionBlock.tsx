@@ -51,10 +51,16 @@ export function FractionBlock({ denominator, scale = 1, showLabel = false, cover
   const primary = coverage?.primary;
   const secondary = coverage?.secondary;
 
+  // Single uncovered region: clip the piece so only the exposed area renders.
+  const coverClip =
+    primary && !secondary && (primary.left > 0 || primary.right > 0)
+      ? `inset(0 ${primary.right * scale}px 0 ${primary.left * scale}px round 6px)`
+      : undefined;
+
   return (
     <div
       className={`${COLOR_BY_DENOM[denominator]} rounded-md`}
-      style={{ width: pieceWidth(denominator) * scale, height: h, boxShadow: PIECE_SHADOW, position: "relative" }}
+      style={{ width: pieceWidth(denominator) * scale, height: h, boxShadow: PIECE_SHADOW, position: "relative", clipPath: coverClip }}
       aria-label={denominator === 1 ? "one whole" : `one ${denominator}th`}
     >
       {showLabel && (

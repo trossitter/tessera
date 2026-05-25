@@ -284,6 +284,7 @@ export default function App() {
   };
 
   const handleRemove = (id: string) => {
+    playTick();
     dispatch({ type: "remove", id });
   };
 
