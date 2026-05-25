@@ -76,8 +76,12 @@ export function Supply({ showLabels, excludeWhole = false, onSpawn, onDragStart,
 
   return (
     <section className="bg-paper rounded-lg shadow-sm border border-taupe p-4 flex flex-col gap-3">
-      {denoms.map((d) => (
-        <div key={d} className="flex gap-1 justify-center">
+      {denoms.map((d, i) => (
+        <div
+          key={d}
+          className="flex gap-1 justify-center piece-jiggle"
+          style={{ animationDelay: `${3.2 + i * 0.12}s` }}
+        >
           {Array.from({ length: d }, (_, i) => (
             <div
               key={i}
