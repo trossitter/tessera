@@ -32,8 +32,10 @@ export type WorkspaceState = Snapshot & {
   seenConfigs: string[]; // every filled-row configKey ever seen; append-only, never rolled back
 };
 
+const SEED_PIECE: Piece = { id: "piece-seed", denominator: 1, x: 0, y: 64 };
+
 export const initialWorkspace: WorkspaceState = {
-  pieces: [],
+  pieces: [SEED_PIECE],
   nextId: 1,
   discoveries: [],
   seenConfigs: [],
