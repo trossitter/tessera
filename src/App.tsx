@@ -110,6 +110,7 @@ export default function App() {
   // --- lesson engine ---
   const [lessonPhase, setLessonPhase] = useState(0);
   const [lessonLineIndex, setLessonLineIndex] = useState(0);
+  const [lessonDismissed, setLessonDismissed] = useState(false);
 
   // --- visual fx ---
   const [glowingIds, setGlowingIds] = useState<Set<string>>(new Set());
@@ -173,8 +174,8 @@ export default function App() {
   // task_complete: practice → complete
   // (fired in handleNext when challenges are finished)
 
-  // Reset line index when lesson phase changes
-  useEffect(() => { setLessonLineIndex(0); }, [lessonPhase]);
+  // Reset line index and dismissed state when lesson phase changes
+  useEffect(() => { setLessonLineIndex(0); setLessonDismissed(false); }, [lessonPhase]);
 
   const handleAdvanceLesson = () => {
     if (lessonLineIndex < lessonLines.length - 1) {
@@ -499,18 +500,41 @@ export default function App() {
         <div className="flex flex-col gap-5 min-h-0 flex-1 min-w-0">
 
           {/* Lesson guide voice — one line at a time */}
-          {currentLessonLine && (
-            <div
-              key={`${lessonPhase}-${lessonLineIndex}`}
-              className={`fade-in bg-paper rounded-lg border border-taupe px-4 py-3 flex items-center justify-between gap-3 ${(!isLastLessonLine || lessonNeedsReady) ? "cursor-pointer active:bg-parchment transition-colors" : ""}`}
-              onClick={(!isLastLessonLine || lessonNeedsReady) ? handleAdvanceLesson : undefined}
-            >
-              <p className="text-sm text-ink/80 leading-snug italic">{currentLessonLine}</p>
-              {(!isLastLessonLine || lessonNeedsReady) && (
-                <span className="shrink-0 text-xs text-ink/35" aria-hidden>→</span>
-              )}
-            </div>
-          )}
+          {currentLessonLine && !lessonDismissed && (() => {
+            const canAdvance = !isLastLessonLine || lessonNeedsReady;
+            const canDismiss = isLastLessonLine && !lessonNeedsReady;
+            const canBack = lessonLineIndex > 0;
+            return (
+              <div
+                key={`${lessonPhase}-${lessonLineIndex}`}
+                className={`fade-in bg-paper rounded-lg border border-taupe px-4 py-3 flex items-center gap-3 ${canAdvance ? "cursor-pointer active:bg-parchment transition-colors" : ""}`}
+                onClick={canAdvance ? handleAdvanceLesson : undefined}
+              >
+                {canBack && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setLessonLineIndex(i => i - 1); }}
+                    className="shrink-0 text-xs text-ink/35 hover:text-ink/60 transition-colors cursor-pointer"
+                    aria-label="previous"
+                  >
+                    ←
+                  </button>
+                )}
+                <p className="text-sm text-ink/80 leading-snug italic flex-1">{currentLessonLine}</p>
+                {canAdvance && <span className="shrink-0 text-xs text-ink/35" aria-hidden>→</span>}
+                {canDismiss && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setLessonDismissed(true); }}
+                    className="shrink-0 text-xs text-ink/35 hover:text-ink/60 transition-colors cursor-pointer"
+                    aria-label="dismiss"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Workspace */}
           <div className="relative flex-1 min-h-0 overflow-hidden flex flex-col">
