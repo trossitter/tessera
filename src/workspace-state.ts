@@ -32,10 +32,8 @@ export type WorkspaceState = Snapshot & {
   seenConfigs: string[]; // every filled-row configKey ever seen; append-only, never rolled back
 };
 
-const SEED_PIECE: Piece = { id: "piece-seed", denominator: 1, x: 0, y: 64 };
-
 export const initialWorkspace: WorkspaceState = {
-  pieces: [SEED_PIECE],
+  pieces: [],
   nextId: 1,
   discoveries: [],
   seenConfigs: [],
@@ -310,15 +308,15 @@ export function workspaceReducer(
     case "replay": {
       const { discovery } = action;
       let nextId = state.nextId;
-      const newPieces: Piece[] = [SEED_PIECE];
+      const newPieces: Piece[] = [];
       let x = 0;
       for (const denom of discovery.configA) {
-        newPieces.push({ id: `piece-${nextId++}`, denominator: denom as Denominator, x, y: 128 });
+        newPieces.push({ id: `piece-${nextId++}`, denominator: denom as Denominator, x, y: 64 });
         x += pieceWidth(denom);
       }
       x = 0;
       for (const denom of discovery.configB) {
-        newPieces.push({ id: `piece-${nextId++}`, denominator: denom as Denominator, x, y: 192 });
+        newPieces.push({ id: `piece-${nextId++}`, denominator: denom as Denominator, x, y: 128 });
         x += pieceWidth(denom);
       }
       return {
