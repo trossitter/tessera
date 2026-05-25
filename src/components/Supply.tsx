@@ -5,6 +5,7 @@ import { SUPPLY_DENOMS, type Denominator } from "../workspace-state";
 type Props = {
   showLabels: boolean;
   excludeWhole?: boolean;
+  jiggle?: boolean;
   onSpawn: (denominator: Denominator) => void;
   onDragStart: (denominator: Denominator, clientX: number, clientY: number) => void;
   onDragMove: (clientX: number, clientY: number) => void;
@@ -18,7 +19,7 @@ const SUPPLY_SCALE = 0.5;
 const DRAG_THRESHOLD_PX = 6;
 const HOLD_LABELS_MS = 2000;
 
-export function Supply({ showLabels, excludeWhole = false, onSpawn, onDragStart, onDragMove, onDragEnd, onDragCancel, onHoldStart, onHoldEnd }: Props) {
+export function Supply({ showLabels, excludeWhole = false, jiggle = false, onSpawn, onDragStart, onDragMove, onDragEnd, onDragCancel, onHoldStart, onHoldEnd }: Props) {
   const denoms = excludeWhole ? SUPPLY_DENOMS.filter(d => d !== 1) : SUPPLY_DENOMS;
   const pressRef = useRef<{
     denominator: Denominator;
@@ -79,8 +80,8 @@ export function Supply({ showLabels, excludeWhole = false, onSpawn, onDragStart,
       {denoms.map((d, i) => (
         <div
           key={d}
-          className="flex gap-1 justify-center piece-jiggle"
-          style={{ animationDelay: `${3.2 + i * 0.12}s` }}
+          className={`flex gap-1 justify-center${jiggle ? " piece-jiggle" : ""}`}
+          style={jiggle ? { animationDelay: `${6.5 + i * 0.12}s` } : undefined}
         >
           {Array.from({ length: d }, (_, i) => (
             <div

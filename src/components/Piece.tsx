@@ -12,13 +12,15 @@ type Props = {
   glowing?: boolean;
   glowPulsing?: boolean;
   showLabel?: boolean;
+  jiggle?: boolean;
+  jiggleDelay?: number;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
   onHoldStart?: () => void;
   onHoldEnd?: () => void;
 };
 
-export function Piece({ piece, glowing, glowPulsing, showLabel, onMove, onRemove, onHoldStart, onHoldEnd }: Props) {
+export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDelay = 0, onMove, onRemove, onHoldStart, onHoldEnd }: Props) {
   const startRef = useRef<{ pointerX: number; pointerY: number; time: number } | null>(null);
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,7 +78,10 @@ export function Piece({ piece, glowing, glowPulsing, showLabel, onMove, onRemove
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      className={glowPulsing ? "piece-glowing-hold" : glowing ? "piece-glowing" : undefined}
+      className={[
+        glowPulsing ? "piece-glowing-hold" : glowing ? "piece-glowing" : undefined,
+        jiggle ? "piece-jiggle" : undefined,
+      ].filter(Boolean).join(" ") || undefined}
       style={{
         position: "absolute",
         left: piece.x,
@@ -87,6 +92,7 @@ export function Piece({ piece, glowing, glowPulsing, showLabel, onMove, onRemove
         touchAction: "none",
         cursor: drag ? "grabbing" : "grab",
         zIndex: drag ? 10 : 1,
+        animationDelay: jiggle ? `${jiggleDelay}s` : undefined,
       }}
     >
       <FractionBlock denominator={piece.denominator} showLabel={showLabel} />

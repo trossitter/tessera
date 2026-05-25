@@ -13,6 +13,7 @@ type Props = {
   encouragement: string | null;
   showLabels: boolean;
   holdActive: boolean;
+  seedJiggle: boolean;
   snapPreview: { x: number; y: number; denominator: Denominator } | null;
   canvasRef: RefObject<HTMLDivElement | null>;
   onMove: (id: string, x: number, y: number) => void;
@@ -34,6 +35,7 @@ export function Workspace({
   encouragement,
   showLabels,
   holdActive,
+  seedJiggle,
   snapPreview,
   canvasRef,
   onMove,
@@ -134,6 +136,8 @@ export function Workspace({
               glowing={glowingIds.has(piece.id)}
               glowPulsing={pulsingIds.has(piece.id)}
               showLabel={showLabels}
+              jiggle={seedJiggle && piece.id === "piece-seed"}
+              jiggleDelay={4}
               onMove={onMove}
               onRemove={onRemove}
               onHoldStart={onHoldStart}

@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useState, useCallback } from "react";
 import { LESSON_SCRIPT } from "./lesson/script";
-import { playSnap, playDrop } from "./sounds";
+import { playSnap, playDrop, preloadAmbient, startAmbient } from "./sounds";
 import { pieceWidth, PIECE_HEIGHT, snap, SNAP_X, SNAP_Y } from "./workspace-state";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
@@ -51,7 +51,7 @@ export default function App() {
   const entranceGoneRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     entranceFadeRef.current = setTimeout(() => setEntranceFading(true), 2300);
-    entranceGoneRef.current = setTimeout(() => setShowEntrance(false), 2900);
+    entranceGoneRef.current = setTimeout(() => { setShowEntrance(false); preloadAmbient(); }, 2900);
     return () => {
       if (entranceFadeRef.current) clearTimeout(entranceFadeRef.current);
       if (entranceGoneRef.current) clearTimeout(entranceGoneRef.current);
@@ -99,6 +99,7 @@ export default function App() {
   const [encouragement, setEncouragement] = useState<string | null>(null);
   const encouragementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstSpawnRef = useRef(false);
+  const [hasSpawned, setHasSpawned] = useState(false);
 
   // --- pill helpers ---
 
@@ -240,6 +241,8 @@ export default function App() {
     }
     if (!firstSpawnRef.current) {
       firstSpawnRef.current = true;
+      setHasSpawned(true);
+      startAmbient();
       setLessonPhase(p => p === 0 ? 1 : p); // silence → exploration_prompt
       const msg = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
       setEncouragement(msg);
@@ -448,6 +451,7 @@ export default function App() {
               encouragement={encouragement}
               showLabels={effectiveShowLabels}
               holdActive={holdLabels}
+              seedJiggle={!hasSpawned}
               snapPreview={snapPreview && supplyDenomRef.current
                 ? { ...snapPreview, denominator: supplyDenomRef.current }
                 : null}
@@ -556,6 +560,7 @@ export default function App() {
           <Supply
             showLabels={effectiveShowLabels}
             excludeWhole={phase === "challenge" && !!currentChallenge && currentChallenge.target.num < currentChallenge.target.denom}
+            jiggle={!hasSpawned}
             onSpawn={handleSpawn}
             onDragStart={handleDragStart}
             onDragMove={handleDragMove}
