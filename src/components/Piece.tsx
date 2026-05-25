@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { FractionBlock } from "./FractionBlock";
 import { snap, SNAP_X, SNAP_Y } from "../workspace-state";
 import type { Piece as PieceType } from "../workspace-state";
@@ -26,6 +26,19 @@ export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDe
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const holdActiveRef = useRef(false);
+
+  const onHoldEndRef = useRef(onHoldEnd);
+  onHoldEndRef.current = onHoldEnd;
+
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+      if (holdActiveRef.current) {
+        holdActiveRef.current = false;
+        onHoldEndRef.current?.();
+      }
+    };
+  }, []);
 
   const clearHold = () => {
     if (holdTimerRef.current) {
