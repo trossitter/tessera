@@ -91,7 +91,7 @@ export function stopAmbient(): void {
 // Pentatonic scale (C4 D4 E4 G4 A4 C5) — warm mallet sound via sine + harmonics + fast decay.
 // playTone(index) where index 0–5 maps low→high.
 
-const XYLOPHONE_FREQS = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3]; // C4 D4 E4 G4 A4 C5
+const XYLOPHONE_FREQS = [130.8, 146.8, 164.8, 196.0, 220.0, 261.6]; // C3 D3 E3 G3 A3 C4
 
 export function playTone(index: number, volume = 0.22): void {
   const ctx = getCtx();
@@ -101,7 +101,7 @@ export function playTone(index: number, volume = 0.22): void {
     const now = ctx.currentTime;
     const master = ctx.createGain();
     master.gain.setValueAtTime(volume, now);
-    master.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
     master.connect(ctx.destination);
     // fundamental + 2 harmonics for mallet body
     [[1, 1.0], [2, 0.35], [3, 0.12]].forEach(([mult, amp]) => {
@@ -113,18 +113,94 @@ export function playTone(index: number, volume = 0.22): void {
       osc.connect(g);
       g.connect(master);
       osc.start(now);
-      osc.stop(now + 1.2);
+      osc.stop(now + 1.8);
     });
   } catch {
     // silent fail
   }
 }
 
-// Play an ascending chime chord — used for discovery moments.
-export function playDiscoveryChime(volume = 0.18): void {
-  [0, 2, 4].forEach((idx, i) => {
-    setTimeout(() => playTone(idx, volume), i * 80);
-  });
+// Triumphant success tone — C3→G3→C4 ascending, 60ms apart.
+// Lower two notes are short; top note rings out. Fits C major palette.
+export function playSuccess(volume = 0.22): void {
+  const NOTES = [
+    { freq: 130.8, decay: 0.6, delay: 0 },    // C3 — short
+    { freq: 196.0, decay: 0.8, delay: 0.06 },  // G3 — short
+    { freq: 261.6, decay: 2.2, delay: 0.12 },  // C4 — held
+  ];
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    NOTES.forEach(({ freq, decay, delay }) => {
+      const start = ctx.currentTime + delay;
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(volume, start + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + decay);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + decay);
+    });
+  } catch {
+    // silent fail
+  }
+}
+
+// Pure sine bell for equivalence discovery — single C4, soft attack, long ring.
+export function playDiscoveryChime(volume = 0.2): void {
+  const ctx = getCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const DURATION = 3.0;
+  try {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = 261.6; // C4
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(volume, now + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + DURATION);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + DURATION);
+  } catch {
+    // silent fail
+  }
+}
+
+// Subtle solution-select tick — shorter and softer than playDrop,
+// bandpass ~900Hz for a muted, woody feel.
+export function playTick(volume = 0.13): void {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    const sampleRate = ctx.sampleRate;
+    const duration = 0.008;
+    const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (sampleRate * 0.004));
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 900;
+    filter.Q.value = 1.2;
+    const gain = ctx.createGain();
+    gain.gain.value = volume;
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    source.start();
+  } catch {
+    // silent fail
+  }
 }
 
 // --- Click sound — shaped noise burst, 12ms, bandpass ~3kHz.

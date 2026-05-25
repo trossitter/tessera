@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useState, useCallback } from "react";
 import { LESSON_SCRIPT } from "./lesson/script";
-import { playSnap, playDrop, playTone, playDiscoveryChime, preloadAmbient, startAmbient } from "./sounds";
+import { playSnap, playDrop, playTick, playTone, playDiscoveryChime, playSuccess, preloadAmbient, startAmbient } from "./sounds";
 import { pieceWidth, PIECE_HEIGHT, snap, SNAP_X, SNAP_Y } from "./workspace-state";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
@@ -19,7 +19,7 @@ import {
 } from "./workspace-state";
 
 const GLOW_DURATION_MS = 1300;
-const ENCOURAGEMENT_DURATION_MS = 3500;
+const ENCOURAGEMENT_DURATION_MS = 4550;
 
 // Challenge arc: composition → equivalence for parts → exhaust equivalences
 const CHALLENGES = [
@@ -270,6 +270,7 @@ export default function App() {
   };
 
   const handleReplay = (discovery: Discovery) => {
+    playTick();
     dispatch({ type: "replay", discovery });
   };
 
@@ -313,7 +314,7 @@ export default function App() {
     const current = CHALLENGES[challengeIndex];
     if (!current) return;
     const key = configKey(holdingConfig);
-    playSnap(0.25);
+    playSuccess();
     const newCount = challengeCredits.length + 1;
     const willComplete = newCount >= current.required;
     setChallengeCredits(prev => [...prev, key]);
@@ -618,7 +619,7 @@ export default function App() {
                     <SortableFinds
                       finds={group}
                       onReorder={(from, to) => handleReorderFinds(label, from, to)}
-                      onReplay={(config) => dispatch({ type: "replay_config", config: config as Denominator[] })}
+                      onReplay={(config) => { playTick(); dispatch({ type: "replay_config", config: config as Denominator[] }); }}
                     />
                   </section>
                 );
