@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    { "source": "/tessera", "destination": "/", "permanent": false },
+    { "source": "/tessera/:path*", "destination": "/:path*", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/aurea", "destination": "https://aurea-jade.vercel.app" },
+    { "source": "/aurea/:path*", "destination": "https://aurea-jade.vercel.app/:path*" }
+  ]
+}
