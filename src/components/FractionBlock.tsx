@@ -25,15 +25,15 @@ type Props = {
   denominator: Denominator;
   scale?: number;
   showLabel?: boolean;
-  coverSide?: "left" | "right";
-  coverPx?: number;
+  labelLeft?: number;
+  labelRight?: number;
   remainingLabel?: string;
 };
 
-export function FractionBlock({ denominator, scale = 1, showLabel = false, coverSide, coverPx = 0, remainingLabel }: Props) {
+export function FractionBlock({ denominator, scale = 1, showLabel = false, labelLeft = 0, labelRight = 0, remainingLabel }: Props) {
   const h = PIECE_HEIGHT * scale;
-  const labelLeft  = coverSide === "left"  ? coverPx * scale : 0;
-  const labelRight = coverSide === "right" ? coverPx * scale : 0;
+  const scaledLeft  = labelLeft  * scale;
+  const scaledRight = labelRight * scale;
   return (
     <div
       className={`${COLOR_BY_DENOM[denominator]} rounded-md`}
@@ -51,8 +51,8 @@ export function FractionBlock({ denominator, scale = 1, showLabel = false, cover
             position: "absolute",
             top: 0,
             bottom: 0,
-            left: labelLeft,
-            right: labelRight,
+            left: scaledLeft,
+            right: scaledRight,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

@@ -14,8 +14,8 @@ type Props = {
   showLabel?: boolean;
   jiggle?: boolean;
   jiggleDelay?: number;
-  coverSide?: "left" | "right";
-  coverPx?: number;
+  labelLeft?: number;
+  labelRight?: number;
   remainingLabel?: string;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
@@ -23,7 +23,7 @@ type Props = {
   onHoldEnd?: () => void;
 };
 
-export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDelay = 0, coverSide, coverPx, remainingLabel, onMove, onRemove, onHoldStart, onHoldEnd }: Props) {
+export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDelay = 0, labelLeft, labelRight, remainingLabel, onMove, onRemove, onHoldStart, onHoldEnd }: Props) {
   const startRef = useRef<{ pointerX: number; pointerY: number; time: number } | null>(null);
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,8 +101,8 @@ export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDe
       <FractionBlock
         denominator={piece.denominator}
         showLabel={showLabel}
-        coverSide={coverSide}
-        coverPx={coverPx}
+        labelLeft={labelLeft}
+        labelRight={labelRight}
         remainingLabel={remainingLabel}
       />
     </div>

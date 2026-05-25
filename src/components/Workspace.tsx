@@ -4,60 +4,88 @@ import { FractionBlock } from "./FractionBlock";
 import type { Piece as PieceType, Denominator } from "../workspace-state";
 import { WHOLE_WIDTH, pieceWidth } from "../workspace-state";
 
-type Coverage = { side: "left" | "right"; coverPx: number; remainingLabel: string };
+type Coverage = { labelLeft: number; labelRight: number; remainingLabel: string };
 
 const UNICODE_FRACS: Record<string, string> = {
-  "1/2": "½", "1/4": "¼", "3/4": "¾", "1/8": "⅛",
+  "1/2": "½", "1/3": "⅓", "1/4": "¼", "1/6": "⅙", "1/8": "⅛",
+  "2/3": "⅔", "3/4": "¾", "5/6": "⅚",
+  "3/8": "3⁄8", "5/8": "5⁄8", "7/8": "7⁄8",
 };
 
 function gcd(a: number, b: number): number {
   return b === 0 ? a : gcd(b, a % b);
 }
 
-function remainingLabel(coveredDenom: number, coveringDenom: number): string {
-  const rawNum = coveringDenom - coveredDenom;
-  const rawDenom = coveredDenom * coveringDenom;
-  const g = gcd(rawNum, rawDenom);
-  const num = rawNum / g;
-  const denom = rawDenom / g;
-  return UNICODE_FRACS[`${num}/${denom}`] ?? `${num}⁄${denom}`;
+function lcm(a: number, b: number): number {
+  return (a / gcd(a, b)) * b;
+}
+
+function fractionLabel(num: number, denom: number): string {
+  const g = gcd(num, denom);
+  const n = num / g, d = denom / g;
+  if (d === 1) return String(n);
+  return UNICODE_FRACS[`${n}/${d}`] ?? `${n}⁄${d}`;
 }
 
 function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
-  // Count how many smaller pieces fully overlap each piece.
-  // Pieces stacked at the same (x, denominator) count as one cover.
-  const coverCounts = new Map<string, number>();
-  const coverBy = new Map<string, PieceType>();
+  const map = new Map<string, Coverage>();
+
   for (const covered of pieces) {
-    const seenPositions = new Set<string>();
+    const coveredW = pieceWidth(covered.denominator);
+
+    // Collect distinct covering intervals (fully inside, strictly smaller).
+    const seenKeys = new Set<string>();
+    const intervals: { relX: number; w: number; denom: number }[] = [];
     for (const covering of pieces) {
       if (covering.id === covered.id) continue;
       if (covering.y !== covered.y) continue;
-      const coveredW = pieceWidth(covered.denominator);
       const coveringW = pieceWidth(covering.denominator);
-      if (coveringW >= coveredW) continue; // must be strictly smaller
-      // covering must be fully inside covered
+      if (coveringW >= coveredW) continue;
       if (covering.x < covered.x || covering.x + coveringW > covered.x + coveredW) continue;
-      const posKey = `${covering.x},${covering.denominator}`;
-      if (seenPositions.has(posKey)) continue;
-      seenPositions.add(posKey);
-      coverCounts.set(covered.id, (coverCounts.get(covered.id) ?? 0) + 1);
-      coverBy.set(covered.id, covering);
+      const key = `${covering.x},${covering.denominator}`;
+      if (seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      intervals.push({ relX: covering.x - covered.x, w: coveringW, denom: covering.denominator });
     }
-  }
-  const map = new Map<string, Coverage>();
-  for (const covered of pieces) {
-    if ((coverCounts.get(covered.id) ?? 0) !== 1) continue; // skip 0 or 2+ covers
-    const covering = coverBy.get(covered.id)!;
-    const coveredW = pieceWidth(covered.denominator);
-    const coveringW = pieceWidth(covering.denominator);
-    const isLeftEdge  = covering.x === covered.x;
-    const isRightEdge = covering.x + coveringW === covered.x + coveredW;
-    if (!isLeftEdge && !isRightEdge) continue; // skip middle placement
+    if (intervals.length === 0) continue;
+
+    // Remaining fraction via LCM — works for any denominators including thirds/sixths.
+    const allDenoms = [covered.denominator, ...intervals.map(iv => iv.denom)];
+    const common = allDenoms.reduce(lcm, 1);
+    const ownUnits = common / covered.denominator;
+    const coveredUnits = intervals.reduce((sum, iv) => sum + common / iv.denom, 0);
+    const remUnits = ownUnits - coveredUnits;
+    if (remUnits <= 0) continue; // fully covered
+
+    // Merge covered pixel intervals.
+    const ranges = intervals
+      .map(iv => [iv.relX, iv.relX + iv.w] as [number, number])
+      .sort((a, b) => a[0] - b[0]);
+    const merged: [number, number][] = [];
+    for (const [s, e] of ranges) {
+      if (merged.length && s <= merged[merged.length - 1][1])
+        merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], e);
+      else merged.push([s, e]);
+    }
+
+    // Find uncovered gaps; pick the largest for label placement.
+    const gaps: [number, number][] = [];
+    let cursor = 0;
+    for (const [s, e] of merged) {
+      if (cursor < s) gaps.push([cursor, s]);
+      cursor = e;
+    }
+    if (cursor < coveredW) gaps.push([cursor, coveredW]);
+    if (gaps.length === 0) continue;
+
+    const [gapL, gapR] = gaps.reduce((best, g) =>
+      g[1] - g[0] > best[1] - best[0] ? g : best
+    );
+
     map.set(covered.id, {
-      side: isLeftEdge ? "left" : "right",
-      coverPx: coveringW,
-      remainingLabel: remainingLabel(covered.denominator, covering.denominator),
+      labelLeft: gapL,
+      labelRight: coveredW - gapR,
+      remainingLabel: fractionLabel(remUnits, common),
     });
   }
   return map;
@@ -201,8 +229,8 @@ export function Workspace({
                   showLabel={showLabels}
                   jiggle={seedJiggle && piece.id === "piece-seed"}
                   jiggleDelay={4}
-                  coverSide={cov?.side}
-                  coverPx={cov?.coverPx}
+                  labelLeft={cov?.labelLeft}
+                  labelRight={cov?.labelRight}
                   remainingLabel={cov?.remainingLabel}
                   onMove={onMove}
                   onRemove={onRemove}
