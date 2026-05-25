@@ -87,6 +87,46 @@ export function stopAmbient(): void {
   }
 }
 
+// --- Xylophone tones ---
+// Pentatonic scale (C4 D4 E4 G4 A4 C5) — warm mallet sound via sine + harmonics + fast decay.
+// playTone(index) where index 0–5 maps low→high.
+
+const XYLOPHONE_FREQS = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3]; // C4 D4 E4 G4 A4 C5
+
+export function playTone(index: number, volume = 0.22): void {
+  const ctx = getCtx();
+  if (!ctx) return;
+  const freq = XYLOPHONE_FREQS[Math.max(0, Math.min(index, XYLOPHONE_FREQS.length - 1))];
+  try {
+    const now = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(volume, now);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+    master.connect(ctx.destination);
+    // fundamental + 2 harmonics for mallet body
+    [[1, 1.0], [2, 0.35], [3, 0.12]].forEach(([mult, amp]) => {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = freq * mult;
+      const g = ctx.createGain();
+      g.gain.value = amp;
+      osc.connect(g);
+      g.connect(master);
+      osc.start(now);
+      osc.stop(now + 1.2);
+    });
+  } catch {
+    // silent fail
+  }
+}
+
+// Play an ascending chime chord — used for discovery moments.
+export function playDiscoveryChime(volume = 0.18): void {
+  [0, 2, 4].forEach((idx, i) => {
+    setTimeout(() => playTone(idx, volume), i * 80);
+  });
+}
+
 // --- Click sound — shaped noise burst, 12ms, bandpass ~3kHz.
 // Placeholder for a real iPod WAV; crisper than a sine but still synthetic.
 export function playDrop(volume = 0.28): void {

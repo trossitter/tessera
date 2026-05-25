@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useState, useCallback } from "react";
 import { LESSON_SCRIPT } from "./lesson/script";
-import { playSnap, playDrop, preloadAmbient, startAmbient } from "./sounds";
+import { playSnap, playDrop, playTone, playDiscoveryChime, preloadAmbient, startAmbient } from "./sounds";
 import { pieceWidth, PIECE_HEIGHT, snap, SNAP_X, SNAP_Y } from "./workspace-state";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
@@ -100,6 +100,7 @@ export default function App() {
   const encouragementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstSpawnRef = useRef(false);
   const [hasSpawned, setHasSpawned] = useState(false);
+  const prevDiscoveryCount = useRef(0);
 
   // --- pill helpers ---
 
@@ -115,6 +116,14 @@ export default function App() {
       firePill();
     }
   }, [state.pieces, phase, firePill]);
+
+  // Chime on new discovery
+  useEffect(() => {
+    if (state.discoveries.length > prevDiscoveryCount.current) {
+      playDiscoveryChime();
+    }
+    prevDiscoveryCount.current = state.discoveries.length;
+  }, [state.discoveries]);
 
   // Trigger 2: child has found two distinct ways to make 1
   useEffect(() => {
@@ -231,6 +240,7 @@ export default function App() {
     if (state.pieces.some(p => p.y >= LAST_ROW_Y)) return;
     if (holdingConfig) return;
     dispatch({ type: "spawn", denominator });
+    playTone({ 1: 0, 2: 1, 4: 3, 8: 5 }[denominator] ?? 0);
     // Re-prompt after dismissal: every 10 pieces
     if (!showPill && (workspacePillFired.current || discoveryPillFired.current)) {
       dismissSpawnCount.current += 1;
