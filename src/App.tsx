@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useState, useCallback } from "react";
 import { LESSON_SCRIPT } from "./lesson/script";
-import { playSnap, playDrop, playTick, playTone, playDiscoveryChime, playSuccess, preloadAmbient, startAmbient } from "./sounds";
+import { playDrop, playTick, playTone, playDiscoveryChime, playSuccess, preloadAmbient, startAmbient } from "./sounds";
 import { pieceWidth, PIECE_HEIGHT, snap, SNAP_X, SNAP_Y } from "./workspace-state";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
