@@ -149,7 +149,7 @@ export default function App() {
     const waysToOne = state.discoveries.filter(d =>
       Math.abs(d.configA.reduce((s, n) => s + 1 / n, 0) - 1) < 1e-9
     );
-    if (waysToOne.length >= 2) {
+    if (waysToOne.length >= 1) {
       discoveryPillFired.current = true;
       firePill();
     }
