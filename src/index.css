@@ -64,7 +64,7 @@
   100% { opacity: 0; transform: translateY(-4px); }
 }
 .encouragement-toast {
-  animation: encouragement-in-out 3.5s ease-in-out forwards;
+  animation: encouragement-in-out 4.55s ease-in-out forwards;
 }
 
 /* Entrance — 4 quadrants of tessera3 fly in from corners and close into one image */

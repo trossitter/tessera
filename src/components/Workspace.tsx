@@ -24,10 +24,12 @@ function remainingLabel(coveredDenom: number, coveringDenom: number): string {
 }
 
 function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
-  // Count how many smaller pieces fully overlap each piece
+  // Count how many smaller pieces fully overlap each piece.
+  // Pieces stacked at the same (x, denominator) count as one cover.
   const coverCounts = new Map<string, number>();
   const coverBy = new Map<string, PieceType>();
   for (const covered of pieces) {
+    const seenPositions = new Set<string>();
     for (const covering of pieces) {
       if (covering.id === covered.id) continue;
       if (covering.y !== covered.y) continue;
@@ -36,6 +38,9 @@ function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
       if (coveringW >= coveredW) continue; // must be strictly smaller
       // covering must be fully inside covered
       if (covering.x < covered.x || covering.x + coveringW > covered.x + coveredW) continue;
+      const posKey = `${covering.x},${covering.denominator}`;
+      if (seenPositions.has(posKey)) continue;
+      seenPositions.add(posKey);
       coverCounts.set(covered.id, (coverCounts.get(covered.id) ?? 0) + 1);
       coverBy.set(covered.id, covering);
     }
@@ -170,7 +175,7 @@ export function Workspace({
                 style={{
                   background: "rgba(30,107,107,0.10)",
                   color: "#1e6b6b",
-                  fontSize: "0.8rem",
+                  fontSize: "1.2rem",
                   fontWeight: 500,
                   padding: "4px 14px",
                   borderRadius: 20,
