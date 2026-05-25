@@ -2,7 +2,61 @@ import { type RefObject } from "react";
 import { Piece } from "./Piece";
 import { FractionBlock } from "./FractionBlock";
 import type { Piece as PieceType, Denominator } from "../workspace-state";
-import { WHOLE_WIDTH } from "../workspace-state";
+import { WHOLE_WIDTH, pieceWidth } from "../workspace-state";
+
+type Coverage = { side: "left" | "right"; coverPx: number; remainingLabel: string };
+
+const UNICODE_FRACS: Record<string, string> = {
+  "1/2": "½", "1/4": "¼", "3/4": "¾", "1/8": "⅛",
+};
+
+function gcd(a: number, b: number): number {
+  return b === 0 ? a : gcd(b, a % b);
+}
+
+function remainingLabel(coveredDenom: number, coveringDenom: number): string {
+  const rawNum = coveringDenom - coveredDenom;
+  const rawDenom = coveredDenom * coveringDenom;
+  const g = gcd(rawNum, rawDenom);
+  const num = rawNum / g;
+  const denom = rawDenom / g;
+  return UNICODE_FRACS[`${num}/${denom}`] ?? `${num}⁄${denom}`;
+}
+
+function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
+  // Count how many smaller pieces fully overlap each piece
+  const coverCounts = new Map<string, number>();
+  const coverBy = new Map<string, PieceType>();
+  for (const covered of pieces) {
+    for (const covering of pieces) {
+      if (covering.id === covered.id) continue;
+      if (covering.y !== covered.y) continue;
+      const coveredW = pieceWidth(covered.denominator);
+      const coveringW = pieceWidth(covering.denominator);
+      if (coveringW >= coveredW) continue; // must be strictly smaller
+      // covering must be fully inside covered
+      if (covering.x < covered.x || covering.x + coveringW > covered.x + coveredW) continue;
+      coverCounts.set(covered.id, (coverCounts.get(covered.id) ?? 0) + 1);
+      coverBy.set(covered.id, covering);
+    }
+  }
+  const map = new Map<string, Coverage>();
+  for (const covered of pieces) {
+    if ((coverCounts.get(covered.id) ?? 0) !== 1) continue; // skip 0 or 2+ covers
+    const covering = coverBy.get(covered.id)!;
+    const coveredW = pieceWidth(covered.denominator);
+    const coveringW = pieceWidth(covering.denominator);
+    const isLeftEdge  = covering.x === covered.x;
+    const isRightEdge = covering.x + coveringW === covered.x + coveredW;
+    if (!isLeftEdge && !isRightEdge) continue; // skip middle placement
+    map.set(covered.id, {
+      side: isLeftEdge ? "left" : "right",
+      coverPx: coveringW,
+      remainingLabel: remainingLabel(covered.denominator, covering.denominator),
+    });
+  }
+  return map;
+}
 
 type Props = {
   pieces: PieceType[];
@@ -129,21 +183,30 @@ export function Workspace({
           )}
 
           {/* Pieces */}
-          {pieces.map((piece) => (
-            <Piece
-              key={piece.id}
-              piece={piece}
-              glowing={glowingIds.has(piece.id)}
-              glowPulsing={pulsingIds.has(piece.id)}
-              showLabel={showLabels}
-              jiggle={seedJiggle && piece.id === "piece-seed"}
-              jiggleDelay={4}
-              onMove={onMove}
-              onRemove={onRemove}
-              onHoldStart={onHoldStart}
-              onHoldEnd={onHoldEnd}
-            />
-          ))}
+          {(() => {
+            const coverage = showLabels ? computeCoverage(pieces) : new Map<string, Coverage>();
+            return pieces.map((piece) => {
+              const cov = coverage.get(piece.id);
+              return (
+                <Piece
+                  key={piece.id}
+                  piece={piece}
+                  glowing={glowingIds.has(piece.id)}
+                  glowPulsing={pulsingIds.has(piece.id)}
+                  showLabel={showLabels}
+                  jiggle={seedJiggle && piece.id === "piece-seed"}
+                  jiggleDelay={4}
+                  coverSide={cov?.side}
+                  coverPx={cov?.coverPx}
+                  remainingLabel={cov?.remainingLabel}
+                  onMove={onMove}
+                  onRemove={onRemove}
+                  onHoldStart={onHoldStart}
+                  onHoldEnd={onHoldEnd}
+                />
+              );
+            });
+          })()}
 
           {/* Snap preview — shows exactly where dragged piece will land */}
           {snapPreview && (

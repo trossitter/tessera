@@ -14,13 +14,16 @@ type Props = {
   showLabel?: boolean;
   jiggle?: boolean;
   jiggleDelay?: number;
+  coverSide?: "left" | "right";
+  coverPx?: number;
+  remainingLabel?: string;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
   onHoldStart?: () => void;
   onHoldEnd?: () => void;
 };
 
-export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDelay = 0, onMove, onRemove, onHoldStart, onHoldEnd }: Props) {
+export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDelay = 0, coverSide, coverPx, remainingLabel, onMove, onRemove, onHoldStart, onHoldEnd }: Props) {
   const startRef = useRef<{ pointerX: number; pointerY: number; time: number } | null>(null);
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,7 +83,7 @@ export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDe
       onPointerCancel={handlePointerUp}
       className={[
         glowPulsing ? "piece-glowing-hold" : glowing ? "piece-glowing" : undefined,
-        jiggle ? "piece-jiggle" : undefined,
+        jiggle ? (piece.id === "piece-seed" ? "piece-jiggle-slow" : "piece-jiggle") : undefined,
       ].filter(Boolean).join(" ") || undefined}
       style={{
         position: "absolute",
@@ -91,11 +94,17 @@ export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDe
           : undefined,
         touchAction: "none",
         cursor: drag ? "grabbing" : "grab",
-        zIndex: drag ? 10 : 1,
+        zIndex: drag ? 100 : piece.denominator,
         animationDelay: jiggle ? `${jiggleDelay}s` : undefined,
       }}
     >
-      <FractionBlock denominator={piece.denominator} showLabel={showLabel} />
+      <FractionBlock
+        denominator={piece.denominator}
+        showLabel={showLabel}
+        coverSide={coverSide}
+        coverPx={coverPx}
+        remainingLabel={remainingLabel}
+      />
     </div>
   );
 }

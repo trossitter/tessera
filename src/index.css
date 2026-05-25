@@ -108,6 +108,10 @@
   animation: piece-jiggle 0.7s ease-in-out infinite;
   animation-fill-mode: both;
 }
+.piece-jiggle-slow {
+  animation: piece-jiggle 1.4s ease-in-out infinite;
+  animation-fill-mode: both;
+}
 
 html, body, #root {
   height: 100%;
