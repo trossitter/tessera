@@ -78,7 +78,8 @@ function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
     const sorted = [...gaps].sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
     const [pL, pR] = sorted[0];
     const primary: CoverRegion = { left: pL, right: coveredW - pR, label: gapLabel(sorted[0]) };
-    const secondary: CoverRegion | null = sorted[1]
+    const equalSplit = sorted[1] && (sorted[1][1] - sorted[1][0]) === (sorted[0][1] - sorted[0][0]);
+    const secondary: CoverRegion | null = equalSplit
       ? { left: sorted[1][0], right: coveredW - sorted[1][1], label: gapLabel(sorted[1]) }
       : null;
 
