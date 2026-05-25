@@ -16,10 +16,6 @@ function gcd(a: number, b: number): number {
   return b === 0 ? a : gcd(b, a % b);
 }
 
-function lcm(a: number, b: number): number {
-  return (a / gcd(a, b)) * b;
-}
-
 function fractionLabel(num: number, denom: number): string {
   const g = gcd(num, denom);
   const n = num / g, d = denom / g;
@@ -47,15 +43,7 @@ function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
       seenKeys.add(key);
       intervals.push({ relX: covering.x - covered.x, w: coveringW, denom: covering.denominator });
     }
-    if (intervals.length === 0) continue;
-
-    // Remaining fraction via LCM — works for any denominators including thirds/sixths.
-    const allDenoms = [covered.denominator, ...intervals.map(iv => iv.denom)];
-    const common = allDenoms.reduce(lcm, 1);
-    const ownUnits = common / covered.denominator;
-    const coveredUnits = intervals.reduce((sum, iv) => sum + common / iv.denom, 0);
-    const remUnits = ownUnits - coveredUnits;
-    if (remUnits <= 0) continue; // fully covered
+    if (intervals.length === 0) continue; // fully covered
 
     // Merge covered pixel intervals.
     const ranges = intervals
@@ -78,6 +66,14 @@ function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
     if (cursor < coveredW) gaps.push([cursor, coveredW]);
     if (gaps.length === 0) continue;
 
+    // Remaining = uncovered pixels as fraction of whole — pixel union, not fraction sum.
+    // Overlapping covering pieces are already merged so double-coverage is handled.
+    const coveredPixels = merged.reduce((sum, [s, e]) => sum + (e - s), 0);
+    const remainingPixels = coveredW - coveredPixels;
+    if (remainingPixels <= 0) continue;
+    const g2 = gcd(remainingPixels, WHOLE_WIDTH);
+    const remLabel = fractionLabel(remainingPixels / g2, WHOLE_WIDTH / g2);
+
     const [gapL, gapR] = gaps.reduce((best, g) =>
       g[1] - g[0] > best[1] - best[0] ? g : best
     );
@@ -85,7 +81,7 @@ function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
     map.set(covered.id, {
       labelLeft: gapL,
       labelRight: coveredW - gapR,
-      remainingLabel: fractionLabel(remUnits, common),
+      remainingLabel: remLabel,
     });
   }
   return map;
