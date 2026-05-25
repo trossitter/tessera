@@ -18,7 +18,7 @@ import {
   type Discovery,
 } from "./workspace-state";
 
-const AUREA_URL = "https://aurea-nu-self.vercel.app";
+const AUREA_URL = "https://aurea-jade.vercel.app";
 
 const GLOW_DURATION_MS = 1300;
 const ENCOURAGEMENT_DURATION_MS = 4550;
