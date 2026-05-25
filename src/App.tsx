@@ -18,6 +18,8 @@ import {
   type Discovery,
 } from "./workspace-state";
 
+const AUREA_URL = "https://aurea-nu-self.vercel.app";
+
 const GLOW_DURATION_MS = 1300;
 const ENCOURAGEMENT_DURATION_MS = 4550;
 
@@ -85,6 +87,20 @@ export default function App() {
   const [supplyDragPos, setSupplyDragPos] = useState<{ clientX: number; clientY: number } | null>(null);
   const [snapPreview, setSnapPreview] = useState<{ x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+
+  // --- phi portal ---
+  const [showPhiPrompt, setShowPhiPrompt] = useState(false);
+  const phiRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!showPhiPrompt) return;
+    const handler = (e: PointerEvent) => {
+      if (phiRef.current && !phiRef.current.contains(e.target as Node)) {
+        setShowPhiPrompt(false);
+      }
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [showPhiPrompt]);
 
   // --- labels toggle + hold-to-peek ---
   const [showLabels, setShowLabels] = useState(false);
@@ -434,6 +450,48 @@ export default function App() {
         >
           designed by Thalia
         </span>
+
+        {/* φ portal to Aurea */}
+        <div ref={phiRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setShowPhiPrompt(v => !v)}
+            className="text-base leading-none px-2 py-1 rounded-md transition-all active:scale-95"
+            style={{
+              color: showPhiPrompt ? "#1e6b6b" : "#1a2e2a",
+              opacity: showPhiPrompt ? 1 : 0.35,
+              fontFamily: "serif",
+              fontSize: "1.1rem",
+              background: showPhiPrompt ? "rgba(30,107,107,0.08)" : "transparent",
+            }}
+            aria-label="Try something new"
+          >
+            φ
+          </button>
+
+          {showPhiPrompt && (
+            <div
+              className="absolute right-0 top-full mt-2 fade-in"
+              style={{ zIndex: 40, minWidth: 210 }}
+            >
+              <div
+                className="bg-paper rounded-xl border border-taupe shadow-lg flex flex-col gap-3"
+                style={{ padding: "18px 20px" }}
+              >
+                <p className="text-sm text-ink/70 leading-snug">want to try something new?</p>
+                <a
+                  href={AUREA_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-bold tracking-widest uppercase px-4 py-2.5 rounded-lg text-center transition-all active:scale-95"
+                  style={{ background: "#1e6b6b", color: "#f7f3e8", textDecoration: "none" }}
+                >
+                  open aurea →
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
       </header>
 
       <main className="flex-1 flex gap-4 p-4 min-h-0">
@@ -454,7 +512,7 @@ export default function App() {
           )}
 
           {/* Workspace */}
-          <div className="relative flex-1 min-h-0 flex flex-col">
+          <div className="relative flex-1 min-h-0 overflow-hidden flex flex-col">
             <Workspace
               pieces={state.pieces}
               glowingIds={holdingConfig ? new Set() : glowingIds}
@@ -570,18 +628,20 @@ export default function App() {
             )}
           </div>
 
-          <Supply
-            showLabels={effectiveShowLabels}
-            excludeWhole={phase === "challenge" && !!currentChallenge && currentChallenge.target.num < currentChallenge.target.denom}
-            jiggle={!hasSpawned}
-            onSpawn={handleSpawn}
-            onDragStart={handleDragStart}
-            onDragMove={handleDragMove}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-            onHoldStart={() => { playDrop(); setHoldLabels(true); }}
-            onHoldEnd={() => setHoldLabels(false)}
-          />
+          <div className="shrink-0">
+            <Supply
+              showLabels={effectiveShowLabels}
+              excludeWhole={phase === "challenge" && !!currentChallenge && currentChallenge.target.num < currentChallenge.target.denom}
+              jiggle={!hasSpawned}
+              onSpawn={handleSpawn}
+              onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+              onHoldStart={() => { playDrop(); setHoldLabels(true); }}
+              onHoldEnd={() => setHoldLabels(false)}
+            />
+          </div>
         </div>
 
         {/* Right panel — unified scroll: challenge status + finds + sandbox discoveries */}

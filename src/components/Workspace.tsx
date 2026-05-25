@@ -131,7 +131,7 @@ export function Workspace({
   onHoldEnd,
 }: Props) {
   return (
-    <section className="bg-paper rounded-lg shadow-sm border border-taupe overflow-hidden min-h-[400px] flex-1 flex flex-col">
+    <section className="bg-paper rounded-lg shadow-sm border border-taupe overflow-hidden flex-1 flex flex-col">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-taupe">
         <button
           type="button"
