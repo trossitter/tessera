@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useState, useCallback } from "react";
 import { LESSON_SCRIPT } from "./lesson/script";
-import { playDrop, playTick, playTone, playDiscoveryChime, playSuccess, preloadAmbient, startAmbient } from "./sounds";
+import { playDrop, playTick, playTone, playDiscoveryChime, playSuccess, preloadAmbient, startAmbient, warmAudio } from "./sounds";
 import { pieceWidth, PIECE_HEIGHT, snap, SNAP_X, SNAP_Y } from "./workspace-state";
 import { Workspace } from "./components/Workspace";
 import { Supply } from "./components/Supply";
@@ -50,9 +50,11 @@ export default function App() {
   const entranceFadeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const entranceGoneRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    document.addEventListener("pointerdown", warmAudio, { once: true, passive: true });
     entranceFadeRef.current = setTimeout(() => setEntranceFading(true), 2300);
     entranceGoneRef.current = setTimeout(() => { setShowEntrance(false); preloadAmbient(); }, 2900);
     return () => {
+      document.removeEventListener("pointerdown", warmAudio);
       if (entranceFadeRef.current) clearTimeout(entranceFadeRef.current);
       if (entranceGoneRef.current) clearTimeout(entranceGoneRef.current);
     };

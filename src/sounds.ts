@@ -12,6 +12,16 @@ function getCtx(): AudioContext | null {
   }
 }
 
+// iOS Safari requires AudioContext to be created AND resumed inside a user gesture.
+// Call this on the first pointerdown anywhere so the context is warm before sounds play.
+export async function warmAudio(): Promise<void> {
+  try {
+    const Ctor: AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: AC }).webkitAudioContext;
+    if (!_ctx || _ctx.state === "closed") _ctx = new Ctor();
+    if (_ctx.state === "suspended") await _ctx.resume();
+  } catch { /* silent */ }
+}
+
 // --- Ambient loop ---
 // Drop the encoded file at /public/assets/ambient.ogg (or .mp3).
 // Call preloadAmbient() early to fetch in the background;
