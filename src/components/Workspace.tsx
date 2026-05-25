@@ -4,7 +4,8 @@ import { FractionBlock } from "./FractionBlock";
 import type { Piece as PieceType, Denominator } from "../workspace-state";
 import { WHOLE_WIDTH, pieceWidth } from "../workspace-state";
 
-type Coverage = { labelLeft: number; labelRight: number; remainingLabel: string };
+type CoverRegion = { left: number; right: number; label: string };
+type Coverage = { primary: CoverRegion; secondary: CoverRegion | null };
 
 const UNICODE_FRACS: Record<string, string> = {
   "1/2": "½", "1/3": "⅓", "1/4": "¼", "1/6": "⅙", "1/8": "⅛",
@@ -66,23 +67,22 @@ function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
     if (cursor < coveredW) gaps.push([cursor, coveredW]);
     if (gaps.length === 0) continue;
 
-    // Remaining = uncovered pixels as fraction of whole — pixel union, not fraction sum.
-    // Overlapping covering pieces are already merged so double-coverage is handled.
-    const coveredPixels = merged.reduce((sum, [s, e]) => sum + (e - s), 0);
-    const remainingPixels = coveredW - coveredPixels;
-    if (remainingPixels <= 0) continue;
-    const g2 = gcd(remainingPixels, WHOLE_WIDTH);
-    const remLabel = fractionLabel(remainingPixels / g2, WHOLE_WIDTH / g2);
+    // Label each gap independently as its fraction of the whole.
+    const gapLabel = ([gL, gR]: [number, number]) => {
+      const px = gR - gL;
+      const g2 = gcd(px, WHOLE_WIDTH);
+      return fractionLabel(px / g2, WHOLE_WIDTH / g2);
+    };
 
-    const [gapL, gapR] = gaps.reduce((best, g) =>
-      g[1] - g[0] > best[1] - best[0] ? g : best
-    );
+    // Sort gaps largest first; take up to 2.
+    const sorted = [...gaps].sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
+    const [pL, pR] = sorted[0];
+    const primary: CoverRegion = { left: pL, right: coveredW - pR, label: gapLabel(sorted[0]) };
+    const secondary: CoverRegion | null = sorted[1]
+      ? { left: sorted[1][0], right: coveredW - sorted[1][1], label: gapLabel(sorted[1]) }
+      : null;
 
-    map.set(covered.id, {
-      labelLeft: gapL,
-      labelRight: coveredW - gapR,
-      remainingLabel: remLabel,
-    });
+    map.set(covered.id, { primary, secondary });
   }
   return map;
 }
@@ -225,9 +225,7 @@ export function Workspace({
                   showLabel={showLabels}
                   jiggle={seedJiggle && piece.id === "piece-seed"}
                   jiggleDelay={4}
-                  labelLeft={cov?.labelLeft}
-                  labelRight={cov?.labelRight}
-                  remainingLabel={cov?.remainingLabel}
+                  coverage={cov ?? null}
                   onMove={onMove}
                   onRemove={onRemove}
                   onHoldStart={onHoldStart}

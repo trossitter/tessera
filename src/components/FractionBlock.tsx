@@ -21,52 +21,67 @@ const LABEL: Record<Denominator, string> = {
 const PIECE_SHADOW =
   "inset 1px 0 0 0 rgba(0,0,0,0.18), inset -1px 0 0 0 rgba(0,0,0,0.18), 0 1px 2px 0 rgba(0,0,0,0.05)";
 
+type CoverRegion = { left: number; right: number; label: string };
+
 type Props = {
   denominator: Denominator;
   scale?: number;
   showLabel?: boolean;
-  labelLeft?: number;
-  labelRight?: number;
-  remainingLabel?: string;
+  coverage?: { primary: CoverRegion; secondary: CoverRegion | null } | null;
 };
 
-export function FractionBlock({ denominator, scale = 1, showLabel = false, labelLeft = 0, labelRight = 0, remainingLabel }: Props) {
+const LABEL_STYLE_BASE = {
+  position: "absolute" as const,
+  top: 0, bottom: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontWeight: 700,
+  letterSpacing: "0.01em",
+  userSelect: "none" as const,
+  pointerEvents: "none" as const,
+  transition: "left 0.35s cubic-bezier(0.34,1.56,0.64,1), right 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+};
+
+export function FractionBlock({ denominator, scale = 1, showLabel = false, coverage }: Props) {
   const h = PIECE_HEIGHT * scale;
-  const scaledLeft  = labelLeft  * scale;
-  const scaledRight = labelRight * scale;
+  const fontSize = Math.max(9, h * 0.38);
+  const color = LABEL_COLOR[denominator];
+
+  const primary = coverage?.primary;
+  const secondary = coverage?.secondary;
+
   return (
     <div
       className={`${COLOR_BY_DENOM[denominator]} rounded-md`}
-      style={{
-        width: pieceWidth(denominator) * scale,
-        height: h,
-        boxShadow: PIECE_SHADOW,
-        position: "relative",
-      }}
+      style={{ width: pieceWidth(denominator) * scale, height: h, boxShadow: PIECE_SHADOW, position: "relative" }}
       aria-label={denominator === 1 ? "one whole" : `one ${denominator}th`}
     >
       {showLabel && (
-        <span
-          style={{
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            left: scaledLeft,
-            right: scaledRight,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: Math.max(9, h * 0.38),
-            fontWeight: 700,
-            color: LABEL_COLOR[denominator],
-            letterSpacing: "0.01em",
-            userSelect: "none",
-            pointerEvents: "none",
-            transition: "left 0.35s cubic-bezier(0.34,1.56,0.64,1), right 0.35s cubic-bezier(0.34,1.56,0.64,1)",
-          }}
-        >
-          {remainingLabel ?? LABEL[denominator]}
-        </span>
+        <>
+          <span style={{
+            ...LABEL_STYLE_BASE,
+            left: (primary?.left ?? 0) * scale,
+            right: (primary?.right ?? 0) * scale,
+            fontSize, color,
+          }}>
+            {primary?.label ?? LABEL[denominator]}
+          </span>
+          {secondary && (
+            <span
+              key={`${secondary.left}-${secondary.right}`}
+              className="label-second"
+              style={{
+                ...LABEL_STYLE_BASE,
+                left: secondary.left * scale,
+                right: secondary.right * scale,
+                fontSize, color,
+              }}
+            >
+              {secondary.label}
+            </span>
+          )}
+        </>
       )}
     </div>
   );

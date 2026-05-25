@@ -14,16 +14,14 @@ type Props = {
   showLabel?: boolean;
   jiggle?: boolean;
   jiggleDelay?: number;
-  labelLeft?: number;
-  labelRight?: number;
-  remainingLabel?: string;
+  coverage?: { primary: { left: number; right: number; label: string }; secondary: { left: number; right: number; label: string } | null } | null;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
   onHoldStart?: () => void;
   onHoldEnd?: () => void;
 };
 
-export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDelay = 0, labelLeft, labelRight, remainingLabel, onMove, onRemove, onHoldStart, onHoldEnd }: Props) {
+export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDelay = 0, coverage, onMove, onRemove, onHoldStart, onHoldEnd }: Props) {
   const startRef = useRef<{ pointerX: number; pointerY: number; time: number } | null>(null);
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,9 +99,7 @@ export function Piece({ piece, glowing, glowPulsing, showLabel, jiggle, jiggleDe
       <FractionBlock
         denominator={piece.denominator}
         showLabel={showLabel}
-        labelLeft={labelLeft}
-        labelRight={labelRight}
-        remainingLabel={remainingLabel}
+        coverage={coverage}
       />
     </div>
   );
