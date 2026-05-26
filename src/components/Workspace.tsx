@@ -38,11 +38,13 @@ function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
       if (covering.y !== covered.y) continue;
       const coveringW = pieceWidth(covering.denominator);
       if (coveringW >= coveredW) continue;
-      if (covering.x < covered.x || covering.x + coveringW > covered.x + coveredW) continue;
+      const overlapLeft = Math.max(covering.x, covered.x) - covered.x;
+      const overlapRight = Math.min(covering.x + coveringW, covered.x + coveredW) - covered.x;
+      if (overlapRight <= overlapLeft) continue;
       const key = `${covering.x},${covering.denominator}`;
       if (seenKeys.has(key)) continue;
       seenKeys.add(key);
-      intervals.push({ relX: covering.x - covered.x, w: coveringW, denom: covering.denominator });
+      intervals.push({ relX: overlapLeft, w: overlapRight - overlapLeft, denom: covering.denominator });
     }
     if (intervals.length === 0) continue; // fully covered
 
