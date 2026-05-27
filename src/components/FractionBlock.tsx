@@ -27,7 +27,7 @@ type Props = {
   denominator: Denominator;
   scale?: number;
   showLabel?: boolean;
-  coverage?: { primary: CoverRegion; secondary: CoverRegion | null; tertiary?: CoverRegion | null } | null;
+  coverage?: { gaps: CoverRegion[]; covererOverlap?: boolean } | null;
 };
 
 const LABEL_STYLE_BASE = {
@@ -48,13 +48,12 @@ export function FractionBlock({ denominator, scale = 1, showLabel = false, cover
   const fontSize = Math.max(9, h * 0.38);
   const color = LABEL_COLOR[denominator];
 
-  const primary = coverage?.primary;
-  const secondary = coverage?.secondary;
-  const tertiary = coverage?.tertiary;
+  const gaps = coverage?.gaps ?? [];
+  const primary = gaps[0];
 
-  // Single uncovered region: clip the piece so only the exposed area renders.
+  // Single uncovered region with no coverer overlap: clip to the exposed area.
   const coverClip =
-    primary && !secondary && (primary.left > 0 || primary.right > 0)
+    primary && gaps.length === 1 && !coverage?.covererOverlap && (primary.left > 0 || primary.right > 0)
       ? `inset(0 ${primary.right * scale}px 0 ${primary.left * scale}px round 6px)`
       : undefined;
 
@@ -66,42 +65,24 @@ export function FractionBlock({ denominator, scale = 1, showLabel = false, cover
     >
       {showLabel && (
         <>
-          <span style={{
-            ...LABEL_STYLE_BASE,
-            left: (primary?.left ?? 0) * scale,
-            right: (primary?.right ?? 0) * scale,
-            fontSize, color,
-          }}>
-            {primary?.label ?? LABEL[denominator]}
-          </span>
-          {secondary && (
+          {gaps.length === 0 ? (
+            <span style={{ ...LABEL_STYLE_BASE, left: 0, right: 0, fontSize, color }}>
+              {LABEL[denominator]}
+            </span>
+          ) : gaps.map((gap, i) => (
             <span
-              key={`${secondary.left}-${secondary.right}`}
-              className="label-second"
+              key={`${gap.left}-${gap.right}`}
+              className={i > 0 ? "label-second" : undefined}
               style={{
                 ...LABEL_STYLE_BASE,
-                left: secondary.left * scale,
-                right: secondary.right * scale,
+                left: gap.left * scale,
+                right: gap.right * scale,
                 fontSize, color,
               }}
             >
-              {secondary.label}
+              {gap.label}
             </span>
-          )}
-          {tertiary && (
-            <span
-              key={`${tertiary.left}-${tertiary.right}`}
-              className="label-second"
-              style={{
-                ...LABEL_STYLE_BASE,
-                left: tertiary.left * scale,
-                right: tertiary.right * scale,
-                fontSize, color,
-              }}
-            >
-              {tertiary.label}
-            </span>
-          )}
+          ))}
         </>
       )}
     </div>

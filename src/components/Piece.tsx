@@ -14,7 +14,7 @@ type Props = {
   showLabel?: boolean;
   jiggle?: boolean;
   jiggleDelay?: number;
-  coverage?: { primary: { left: number; right: number; label: string }; secondary: { left: number; right: number; label: string } | null } | null;
+  coverage?: { gaps: { left: number; right: number; label: string }[]; covererOverlap?: boolean } | null;
   onMove: (id: string, x: number, y: number) => void;
   onRemove: (id: string) => void;
   onHoldStart?: () => void;

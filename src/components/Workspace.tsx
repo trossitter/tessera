@@ -5,7 +5,7 @@ import type { Piece as PieceType, Denominator } from "../workspace-state";
 import { WHOLE_WIDTH, pieceWidth } from "../workspace-state";
 
 type CoverRegion = { left: number; right: number; label: string };
-type Coverage = { primary: CoverRegion; secondary: CoverRegion | null; tertiary: CoverRegion | null };
+type Coverage = { gaps: CoverRegion[]; covererOverlap: boolean };
 
 const UNICODE_FRACS: Record<string, string> = {
   "1/2": "½", "1/3": "⅓", "1/4": "¼", "1/6": "⅙", "1/8": "⅛",
@@ -76,18 +76,15 @@ function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
       return fractionLabel(px / g2, WHOLE_WIDTH / g2);
     };
 
-    // Sort gaps largest first; take up to 2.
-    const sorted = [...gaps].sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
-    const [pL, pR] = sorted[0];
-    const primary: CoverRegion = { left: pL, right: coveredW - pR, label: gapLabel(sorted[0]) };
-    const secondary: CoverRegion | null = sorted[1]
-      ? { left: sorted[1][0], right: coveredW - sorted[1][1], label: gapLabel(sorted[1]) }
-      : null;
-    const tertiary: CoverRegion | null = sorted[2]
-      ? { left: sorted[2][0], right: coveredW - sorted[2][1], label: gapLabel(sorted[2]) }
-      : null;
+    // Detect whether any two covering intervals overlap (before merging).
+    const covererOverlap = ranges.some((iv, i) => i > 0 && iv[0] < ranges[i - 1][1]);
 
-    map.set(covered.id, { primary, secondary, tertiary });
+    // Sort gaps largest-first so the primary label gets the most prominent region.
+    const gapRegions: CoverRegion[] = [...gaps]
+      .sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))
+      .map(g => ({ left: g[0], right: coveredW - g[1], label: gapLabel(g) }));
+
+    map.set(covered.id, { gaps: gapRegions, covererOverlap });
   }
   return map;
 }
