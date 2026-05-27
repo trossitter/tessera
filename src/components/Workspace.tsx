@@ -5,7 +5,7 @@ import type { Piece as PieceType, Denominator } from "../workspace-state";
 import { WHOLE_WIDTH, pieceWidth } from "../workspace-state";
 
 type CoverRegion = { left: number; right: number; label: string };
-type Coverage = { primary: CoverRegion; secondary: CoverRegion | null };
+type Coverage = { primary: CoverRegion; secondary: CoverRegion | null; tertiary: CoverRegion | null };
 
 const UNICODE_FRACS: Record<string, string> = {
   "1/2": "½", "1/3": "⅓", "1/4": "¼", "1/6": "⅙", "1/8": "⅛",
@@ -83,8 +83,11 @@ function computeCoverage(pieces: PieceType[]): Map<string, Coverage> {
     const secondary: CoverRegion | null = sorted[1]
       ? { left: sorted[1][0], right: coveredW - sorted[1][1], label: gapLabel(sorted[1]) }
       : null;
+    const tertiary: CoverRegion | null = sorted[2]
+      ? { left: sorted[2][0], right: coveredW - sorted[2][1], label: gapLabel(sorted[2]) }
+      : null;
 
-    map.set(covered.id, { primary, secondary });
+    map.set(covered.id, { primary, secondary, tertiary });
   }
   return map;
 }

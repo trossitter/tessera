@@ -27,7 +27,7 @@ type Props = {
   denominator: Denominator;
   scale?: number;
   showLabel?: boolean;
-  coverage?: { primary: CoverRegion; secondary: CoverRegion | null } | null;
+  coverage?: { primary: CoverRegion; secondary: CoverRegion | null; tertiary?: CoverRegion | null } | null;
 };
 
 const LABEL_STYLE_BASE = {
@@ -50,6 +50,7 @@ export function FractionBlock({ denominator, scale = 1, showLabel = false, cover
 
   const primary = coverage?.primary;
   const secondary = coverage?.secondary;
+  const tertiary = coverage?.tertiary;
 
   // Single uncovered region: clip the piece so only the exposed area renders.
   const coverClip =
@@ -85,6 +86,20 @@ export function FractionBlock({ denominator, scale = 1, showLabel = false, cover
               }}
             >
               {secondary.label}
+            </span>
+          )}
+          {tertiary && (
+            <span
+              key={`${tertiary.left}-${tertiary.right}`}
+              className="label-second"
+              style={{
+                ...LABEL_STYLE_BASE,
+                left: tertiary.left * scale,
+                right: tertiary.right * scale,
+                fontSize, color,
+              }}
+            >
+              {tertiary.label}
             </span>
           )}
         </>
